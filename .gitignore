@@ -1,0 +1,11 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+.httr-oauth
+.DS_Store
+test_setup.R
+*.pdf
+*.log
+tworzenie_boxplota.*
+example_boxplot_raw.png

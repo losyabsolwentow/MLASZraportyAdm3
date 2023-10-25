@@ -1,0 +1,1085 @@
+---
+title: |
+  | Raport z monitoringu karier absolwentów, którzy ukończyli `r get(params$obiektWskazniki)$typ_szk_dop[[1]]` w roku szkolnym `r params$rok - 1`/`r params$rok`
+subtitle: |
+  | `r paste0("Województwo ", get(params$obiektWskazniki)$nazwa_woj[[1]])`
+  | `r paste0("Branża ", get(params$obiektWskazniki)$branza[[1]])`
+output:
+  pdf_document:
+    dev: cairo_pdf
+    fig_caption: no
+    includes:
+      in_header: naglowek2.tex
+    toc: yes
+    toc_depth: 2
+lang: pl
+papersize: a4
+fontsize: 11pt
+geometry: margin=20mm
+params:
+  plikZObiektami: ../../data/wskaznikiAdmin2.RData
+  obiektWskazniki: woj
+  obiektWskaznikiPorownanie: kraj
+  plikRozkladAbsolwentow: ../../data/l_abs_woj_adm2.RData
+  rozkladAbsolwentow: l_abs_woj
+  progLiczebnosci: 10
+  typDokumentu: pdf
+  wyrownanieTabWykr: center
+  rok: 2021
+  testowanie: FALSE
+wskazniki:
+  wskazniki: woj
+  wskaznikiGrPor: kraj
+---
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+# biblioteki
+library(dplyr)
+library(ggplot2)
+library(kableExtra)
+library(tidyr)
+library(forcats)
+library(MLASZraportyAdm2)
+# if (!exists("params")) {
+#   params = list(plikZObiektami = "../../data/wskaznikiAdmin2.RData",
+#                 obiektWskazniki = "szk",
+#                 obiektWskaznikiPorownanie = "god",
+#                 obiektWskaznikiKraj = "kraj",
+#                 obiektWskaznikiKraj2 = "kraj2",
+#                 progLiczebnosci = 10,
+#                 typDokumentu = "pdf",
+#                 wyrownanieTabWykr = "center",
+#                 rok = ",params$rok,")
+# }
+
+# obiekty z parametrów
+progLiczebnosci = params$progLiczebnosci
+typDokumentu = params$typDokumentu
+wyrownanieTabWykr = params$wyrownanieTabWykr
+rocznik = paste0(params$rok - 1, "/", params$rok)
+
+# zbiory danych
+if (params$plikZObiektami != "") {# to działa przy ręcznym prototypowaniu
+  load(params$plikZObiektami)
+  woj = get(params$obiektWskazniki)
+  kraj = get(params$obiektWskaznikiPorownanie)
+} else {# to działa przy wywoływaniu przez generuj_raport()
+  woj = get(params$obiektWskazniki)
+  kraj = get(params$obiektWskaznikiPorownanie)
+}
+
+l_abs_woj = l_abs_woj %>% 
+  filter(typ_szk %in% woj$typ_szk[[1]])
+```
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+# odmiany
+odmiany = list(
+  typ_szk_dop = case_when(
+    woj$typ_szk[[1]] %in% "Branżowa szkoła I stopnia" ~ "branżową szkołę I stopnia",
+    woj$typ_szk[[1]] %in% "Technikum" ~ "technikum",
+    woj$typ_szk[[1]] %in% "Szkoła policealna" ~ "szkołę policealną"),
+  typ_szk_cel_mn = case_when(
+    woj$typ_szk[[1]] %in% "Branżowa szkoła I stopnia" ~ "branżowych szkół I stopnia",
+    woj$typ_szk[[1]] %in% "Technikum" ~ "techników",
+    woj$typ_szk[[1]] %in% "Szkoła policealna" ~ "szkół policealnych"),
+  typ_szk_narz_mn = case_when(
+    woj$typ_szk[[1]] %in% "Branżowa szkoła I stopnia" ~ "branżowych szkołach I stopnia",
+    woj$typ_szk[[1]] %in% "Technikum" ~ "technikach",
+    woj$typ_szk[[1]] %in% "Szkoła policealna" ~ "szkołach policealnych"),
+  typ_szk_bier = case_when(
+    woj$typ_szk[[1]] %in% "Branżowa szkoła I stopnia" ~ "branżowej szkoły I stopnia",
+    woj$typ_szk[[1]] %in% "Technikum" ~ "technikum",
+    woj$typ_szk[[1]] %in% "Szkoła policealna" ~ "szkoły policealnej"),
+  typ_szk_mian_mn = case_when(
+    woj$typ_szk[[1]] %in% "Branżowa szkoła I stopnia" ~ "branżowe szkoły I stopnia",
+    woj$typ_szk[[1]] %in% "Technikum" ~ "technika",
+    woj$typ_szk[[1]] %in% "Szkoła policealna" ~ "szkoły policealne"),
+  woj_szk_narz = case_when(
+    woj$teryt_woj[[1]] %in% 2 ~ "dolnośląskim",
+    woj$teryt_woj[[1]] %in% 4 ~ "kujawsko-pomorskim",
+    woj$teryt_woj[[1]] %in% 6 ~ "lubelskim",
+    woj$teryt_woj[[1]] %in% 8 ~ "lubuskim",
+    woj$teryt_woj[[1]] %in% 10 ~ "łódzkim",
+    woj$teryt_woj[[1]] %in% 12 ~ "małopolskim",
+    woj$teryt_woj[[1]] %in% 14 ~ "mazowieckim",
+    woj$teryt_woj[[1]] %in% 16 ~ "opolskim",
+    woj$teryt_woj[[1]] %in% 18 ~ "podkarpackim",
+    woj$teryt_woj[[1]] %in% 20 ~ "podlaskim",
+    woj$teryt_woj[[1]] %in% 22 ~ "pomorskim",
+    woj$teryt_woj[[1]] %in% 24 ~ "śląskim",
+    woj$teryt_woj[[1]] %in% 26 ~ "świętokrzyskim",
+    woj$teryt_woj[[1]] %in% 28 ~ "warmińsko-mazurskim",
+    woj$teryt_woj[[1]] %in% 30 ~ "wielkopolskim",
+    woj$teryt_woj[[1]] %in% 32 ~ "zachodniopomorskim"),
+  branza_dop = case_when(
+    woj$branza[[1]] %in% "rolno-hodowlana" ~ "rolno-hodowlanej",
+    woj$branza[[1]] %in% "elektroenergetyczna" ~ "elektroenergetycznej",
+    woj$branza[[1]] %in% "ekonomiczno-administracyjna" ~ "ekonomiczno-administracyjnej",
+    woj$branza[[1]] %in% "hotelarsko-gastronomiczno-turystyczna" ~ "hotelarsko-gastronomiczno-turystycznej",
+    woj$branza[[1]] %in% "motoryzacyjna" ~ "motoryzacyjnej",
+    woj$branza[[1]] %in% "budowlana" ~ "budowlanej",
+    woj$branza[[1]] %in% "ogrodnicza" ~ "ogrodniczej",
+    woj$branza[[1]] %in% "fryzjersko-kosmetyczna" ~ "fryzjersko-kosmetycznej",
+    woj$branza[[1]] %in% "spedycyjno-logistyczna" ~ "spedycyjno-logistycznej",
+    woj$branza[[1]] %in% "elektroniczno-mechatroniczna" ~ "elektroniczno-mechatronicznej",
+    woj$branza[[1]] %in% "transportu kolejowego" ~ "transportu kolejowego",
+    woj$branza[[1]] %in% "poligraficzna" ~ "poligraficznej",
+    woj$branza[[1]] %in% "mechaniczna" ~ "mechanicznej",
+    woj$branza[[1]] %in% "teleinformatyczna" ~ "teleinformatycznej",
+    woj$branza[[1]] %in% "handlowa" ~ "handlowej",
+    woj$branza[[1]] %in% "drzewno-meblarska" ~ "drzewno-meblarskiej",
+    woj$branza[[1]] %in% "spożywcza" ~ "spożywczej",
+    woj$branza[[1]] %in% "przemysłu mody" ~ "przemysłu mody",
+    woj$branza[[1]] %in% "transportu lotniczego" ~ "transportu lotniczego",
+    woj$branza[[1]] %in% "leśna" ~ "leśnej",
+    woj$branza[[1]] %in% "audiowizualna" ~ "audiowizualnej",
+    woj$branza[[1]] %in% "chemiczna" ~ "chemicznej",
+    woj$branza[[1]] %in% "górniczo-wiertnicza" ~ "górniczo-wiertniczej",
+    woj$branza[[1]] %in% "opieki zdrowotnej" ~ "opieki zdrowotnej",
+    woj$branza[[1]] %in% "transportu drogowego" ~ "transportu drogowego",
+    woj$branza[[1]] %in% "transportu wodnego" ~ "transportu wodnego",
+    woj$branza[[1]] %in% "metalurgiczna" ~ "metalurgicznej",
+    woj$branza[[1]] %in% "mechaniki precyzyjnej" ~ "mechaniki precyzyjnej",
+    woj$branza[[1]] %in% "pomocy społecznej" ~ "pomocy społecznej",
+    woj$branza[[1]] %in% "ceramiczna-szklarska" ~ "ceramiczna-szklarskiej",
+    woj$branza[[1]] %in% "ochrony i bezpieczeństwa osób i mienia" ~ "ochrony i bezpieczeństwa osób i mienia",
+    woj$branza[[1]] %in% "rybacka" ~ "rybackiej"),
+  woj_dop = case_when(
+    woj$teryt_woj[[1]] %in% 2 ~ "dolnośląskiego",
+    woj$teryt_woj[[1]] %in% 4 ~ "kujawsko-pomorskiego",
+    woj$teryt_woj[[1]] %in% 6 ~ "lubelskiego",
+    woj$teryt_woj[[1]] %in% 8 ~ "lubuskiego",
+    woj$teryt_woj[[1]] %in% 10 ~ "łódzkiego",
+    woj$teryt_woj[[1]] %in% 12 ~ "małopolskiego",
+    woj$teryt_woj[[1]] %in% 14 ~ "mazowieckiego",
+    woj$teryt_woj[[1]] %in% 16 ~ "opolskiego",
+    woj$teryt_woj[[1]] %in% 18 ~ "podkarpackiego",
+    woj$teryt_woj[[1]] %in% 20 ~ "podlaskiego",
+    woj$teryt_woj[[1]] %in% 22 ~ "pomorskiego",
+    woj$teryt_woj[[1]] %in% 24 ~ "śląskiego",
+    woj$teryt_woj[[1]] %in% 26 ~ "świętokrzyskiego",
+    woj$teryt_woj[[1]] %in% 28 ~ "warmińsko-mazurskiego",
+    woj$teryt_woj[[1]] %in% 30 ~ "wielkopolskiego",
+    woj$teryt_woj[[1]] %in% 32 ~ "zachodniopomorskiego"),
+  woj_nazwa = case_when(
+    woj$teryt_woj[[1]] %in% 2 ~ "dolnośląskie",
+    woj$teryt_woj[[1]] %in% 4 ~ "kujawsko-pomorskie",
+    woj$teryt_woj[[1]] %in% 6 ~ "lubelskie",
+    woj$teryt_woj[[1]] %in% 8 ~ "lubuskie",
+    woj$teryt_woj[[1]] %in% 10 ~ "łódzkie",
+    woj$teryt_woj[[1]] %in% 12 ~ "małopolskie",
+    woj$teryt_woj[[1]] %in% 14 ~ "mazowieckie",
+    woj$teryt_woj[[1]] %in% 16 ~ "opolskie",
+    woj$teryt_woj[[1]] %in% 18 ~ "podkarpackie",
+    woj$teryt_woj[[1]] %in% 20 ~ "podlaskie",
+    woj$teryt_woj[[1]] %in% 22 ~ "pomorskie",
+    woj$teryt_woj[[1]] %in% 24 ~ "śląskie",
+    woj$teryt_woj[[1]] %in% 26 ~ "świętokrzyskie",
+    woj$teryt_woj[[1]] %in% 28 ~ "warmińsko-mazurskie",
+    woj$teryt_woj[[1]] %in% 30 ~ "wielkopolskie",
+    woj$teryt_woj[[1]] %in% 32 ~ "zachodniopomorskie"),
+  abs = ifelse(woj$l_abs[[1]] %in% 1, " absolwenta", " absolwentów"),
+  kob = if (woj$l_kobiet[[1]] %in% 0:19) {
+    case_when(
+      woj$l_kobiet[[1]] %in% 0 ~ "kobiet",
+      woj$l_kobiet[[1]] %in% 1 ~ "kobietę",
+      woj$l_kobiet[[1]] %in% c(2:4) ~ "kobiety",
+      woj$l_kobiet[[1]] %in% c(5:19) ~ "kobiet")
+  } else {
+    case_when(
+      (woj$l_kobiet[[1]] %% 10) %in% c(0, 1, 5:9) ~ "kobiet",
+      (woj$l_kobiet[[1]] %% 10) %in% c(2:4) ~ "kobiety")
+  },
+  abs_opi = ifelse(woj$l_abs_zrodla[[1]]$n_opi %in% 1, " absolwenta", " absolwentów"),
+  abs_zus = ifelse(woj$l_abs_zrodla[[1]]$n_zus %in% 1, " absolwenta", " absolwentów"),
+  osob_zus = if (woj$l_abs_zrodla[[1]]$n_zus[[1]] %in% 0:19) {
+    case_when(
+      woj$l_abs_zrodla[[1]]$n_zus %in% 0 ~ " osób",
+      woj$l_abs_zrodla[[1]]$n_zus %in% 1 ~ " osoba",
+      woj$l_abs_zrodla[[1]]$n_zus %in% c(2:4) ~ " osoby",
+      woj$l_abs_zrodla[[1]]$n_zus %in% c(5:19) ~ " osób")
+  } else {
+    case_when(
+      (woj$l_abs_zrodla[[1]]$n_zus %% 10) %in% c(0, 1, 5:9) ~ " osoby",
+      (woj$l_abs_zrodla[[1]]$n_zus %% 10) %in% c(2:4) ~ " osób")
+  }
+)
+
+# l_abs_woj = l_abs_woj %>% 
+#   filter(typ_szk %in% woj$typ_szk[[1]],
+#          woj_nazwa %in% woj$nazwa_woj[[1]])
+```
+
+```{r testing, eval=params$testowanie, echo=FALSE, message=FALSE, warning=FALSE, results='asis'}
+cat(ifelse(typDokumentu %in% "pdf", "---", ""))
+
+cat(
+  "Branża: ",
+  woj$branza[[1]],
+  "\nWojewództwo: ",
+  woj$nazwa_woj[[1]],
+  "\nZmienna rocznik: ",
+  rocznik,
+  "\nLiczba absolwentów: ",
+  woj$l_abs[[1]],
+  sep = "")
+
+cat(ifelse(typDokumentu %in% "pdf", "---", ""))
+```
+
+`r ifelse(typDokumentu %in% "pdf", "---", "")`
+
+`r ifelse(typDokumentu %in% "pdf", "\\vfill\n\\includegraphics{Belka-Losy-absolwentow-Kolor-PL}", "")`
+
+`r ifelse(typDokumentu %in% "pdf", "\\newpage", "")`
+
+# 1. Wprowadzenie
+
+## Idea monitoringu
+
+Monitoring karier absolwentów to zadanie powierzone ministrowi właściwemu do spraw oświaty w ustawie [Prawo oświatowe](http://isap.sejm.gov.pl/isap.nsf/download.xsp/WDU20210000619/O/D20210619.pdf). Analogiczne rozwiązania funkcjonują od kilku lat w szkolnictwie wyższym. Celem monitoringu jest zapewnianie informacji na temat przebiegu karier absolwentów na potrzeby prowadzenia polityki oświatowej państwa na poziomie krajowym, regionalnym i lokalnym. Wiarygodne i dostarczane cyklicznie statystyki opisujące przebieg karier edukacyjno-zawodowych absolwentów szkół ponadpodstawowych w Polsce mają pomóc w dostosowywaniu kierunków i treści kształcenia do wymogów rynku pracy. Raporty takie jak ten są opracowywane dla poszczególnych szkół, żeby pomóc im w monitorowaniu losów kolejnych roczników absolwentów i uzyskiwaniu w ten sposób informacji pomocnych w kształtowaniu oferty oraz podnoszeniu jakości kształcenia. Informacje zawarte w raportach mogą być użyteczne również dla instytucji rynku pracy i pracodawców, a także pomóc uczniom w wyborze kierunku kształcenia.
+
+Należy pamiętać, że oprócz kształcenia w szkole, na sytuację edukacyjną i zawodową absolwentów wpływa wiele innych uwarunkowań. Do takich uwarunkowań należą wiedza i umiejętności zdobyte przed rozpoczęciem nauki w szkole oraz sytuacja na lokalnym rynku pracy i dostępna dla absolwentów oferta edukacyjna. Ponadto dane, na podstawie których są sporządzane raporty, nie odzwierciedlają w pełni aktywności zawodowej absolwentów, nie uwzględniają na przykład pracy podejmowanej za granicą. Dlatego informacji o losach absolwentów nie można, bez uwzględnienia dodatkowego kontekstu, traktować jako miary efektywności poszczególnych szkół.
+
+## Źródła i przetwarzanie danych
+
+Raporty są przygotowywane na podstawie danych z publicznych rejestrów. Monitoring opiera się na danych dotyczących nauki w szkołach ponadpodstawowych (dane Informatycznego Centrum Edukacji i Nauki) oraz na studiach (dane Ośrodka Przetwarzania Informacji nadzorowanego przez ministra właściwego ds. szkolnictwa wyższego i nauki), uzyskiwania dyplomów i świadectw (dane Okręgowych Komisji Egzaminacyjnych) oraz aktywności na rynku pracy (dane Zakładu Ubezpieczeń Społecznych).
+
+Dzięki wykorzystaniu danych rejestrowych monitoring obejmuje niemal całą populację absolwentów.
+
+Pozyskane dane są przetwarzane, łączone i anonimizowane przez Informatyczne Centrum Edukacji i Nauki.
+
+Analizy i sporządzane automatycznie raporty są projektowane i przygotowywane przez Instytut Badań Edukacyjnych. 
+
+## Absolwenci `r odmiany$typ_szk_cel_mn` uwzględnieni w raporcie
+
+```{r, echo=FALSE, message=FALSE, results='asis', fig.align=wyrownanieTabWykr, warning=FALSE}
+cat(
+  ifelse(woj$l_abs[[1]] >= progLiczebnosci,
+         paste0("Ten raport dotyczy "),
+         paste0("Monitoring objął ")),
+  woj$l_abs[[1]],
+  odmiany$abs,
+  " (w tym ",
+  woj$l_kobiet[[1]],
+  " ",
+  odmiany$kob,
+  "), którzy ukończyli kształcenie w zawodzie należącym do branży ",
+  odmiany$branza_dop,
+  " w województwie ",
+  odmiany$woj_szk_narz,
+  " w roku szkolnym ",
+  rocznik,
+  ". Informacje o absolwentach pozyskano z Systemu Informacji Oświatowej według stanu bazy na 15 marca 2022 roku. Absolwentami są uczniowie ostatnich klas szkół, którym w SIO zakończono przypisanie do oddziału wybierając status \"Ukończył szkołę\". Ze względu na zapewnienie kompletności danych w kolejnych raportach, ważne jest nadawanie przez szkoły takiego statusu absolwentom do końca roku kalendarzowego, w którym zakończyli naukę.\n\nLiczebność grup, dla których prezentowane są wyniki, zależy od dostępności informacji o absolwentach w poszczególnych rejestrach.\n\n* Ośrodek Przetwarzania Informacji przekazał dane dotyczące ",
+  woj$l_abs_zrodla[[1]]$n_opi,
+  odmiany$abs_opi,
+  " ",
+  odmiany$typ_szk_cel_mn,
+  " z województwa ",
+  odmiany$woj_dop,
+  " z branży ",
+  odmiany$branza_dop,
+  ", którzy rozpoczęli naukę w szkołach wyższych do końca grudnia ", 
+  params$rok,
+  " roku (według stanu na 31 grudnia 2021 roku).\n\n* Dane z Zakładu Ubezpieczeń Społecznych informują o rejestrowanej przez ZUS aktywności zawodowej ",
+  woj$l_abs_zrodla[[1]]$n_zus,
+  odmiany$abs_zus,
+  " z danego województwa i branży.\n\n",
+  sep = ""
+)
+```
+
+W raporcie opisujemy sytuację absolwentów z rocznika `r rocznik` w roku kalendarzowym, w którym ukończyli szkołę.
+
+## Sposób prezentowania wyników
+
+W raporcie przedstawiono w jakiej sytuacji absolwenci, którzy ukończyli szkołę w roku szkolnym `r params$rocznik` byli w roku `r params$rok` (kalendarzowym). W dalszej części raportu nazywamy ich "absolwentami z rocznika `r params$rocznik`". Przypisanie absolwentowi określonego statusu (np. “uczy się” lub “pracuje”) w danym miesiącu oznacza, że przynajmniej przez jeden dzień w tym miesiącu miał taki status. 
+
+Wyniki monitoringu prezentujemy w różnych ujęciach:
+
+* Wartości danego wskaźnika w kolejnych miesiącach rozpatrywanego okresu pozwalają śledzić jak zmieniała się sytuacja edukacyjna i zawodowa absolwentów. W przypadku wskaźników odnoszących się do sytuacji edukacyjnej i zawodowej jest to okres od stycznia do grudnia `r params$rok` roku.
+
+* Szczegółowe zestawienia dotycząc sytuacji edukacyjnej i zawodowej absolwentów odnoszą się do ich sytuacji w grudniu `r params$rok` roku, co pozwala na uwzględnienie m.in. kontynuowania przez część absolwentów nauki na studiach.
+
+* Niektóre wskaźniki są zdefiniowane jako średnia wartość w danym okresie (przychód uzyskiwany z pracy) lub okres, w którym absolwent miał określony status (praca, bezrobocie, bierność edukacyjna i zawodowa). Takie wskaźniki obliczyliśmy dla okresu od września do grudnia `r params$rok` roku. Wrzesień jest pierwszym miesiącem, w którym absolwenci formalnie nie byli już uczniami, a grudzień ostatnim, dla którego w momencie sporządzania tego raportu dysponujemy kompletnymi danymi o absolwentach figurujących w rejestrach.
+
+Niektóre wyniki dotyczące absolwentów branży w województwie zostały zestawione z wynikami dotyczącymi grupy odniesienia. Grupę odniesienia stanowią absolwenci, którzy kształcili się w zawodzie należącym do branży `r odmiany$branza_dop` w całym kraju.
+
+**Ze względu na potrzebę zachowania anonimowości absolwentów, dane dla grup liczących poniżej 10 osób nie są prezentowane również w przypadku absolwentów z branży `r odmiany$branza_dop` w województwie `r odmiany$woj_szk_narz`.** W celu zachowania czytelności, na wykresach nie są umieszczane wartości etykiet poniżej 6%.
+
+## Wykorzystanie raportu
+
+Przy wykorzystywaniu informacji z raportów prosimy o podanie źródła:
+
+*Raport roczny z monitoringu karier absolwentów z województwa `r odmiany$woj_dop`, którzy ukończyli kształcenie w branży `r odmiany$branza_dop` w `r params$rok` roku. Monitoring na podstawie danych rejestrowych. Warszawa: Instytut Badań Edukacyjnych, 2022.*
+
+Raport jest dostępny na zasadach licencji ["Creative Commons Uznanie autorstwa-Użycie niekomercyjne-Na tych samych warunkach 4.0 Międzynarodowe"](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.pl).
+
+`r ifelse(typDokumentu %in% "pdf", "\\newpage", "")`
+
+# 2. Zawody najliczniej reprezentowane wśród absolwentów `r odmiany$typ_szk_cel_mn` z rocznika `r rocznik` w branży `r odmiany$branza_dop`
+
+```{r, echo=FALSE, message=FALSE, results='asis', fig.align=wyrownanieTabWykr, warning=FALSE}
+if (woj$l_abs[[1]] >= progLiczebnosci) {
+  cat(
+    "Absolwenci branży ",
+    odmiany$branza_dop,
+    " stanowili ",
+    round(woj$l_abs[[1]] / l_abs_woj$n[l_abs_woj$woj_nazwa %in% woj$nazwa_woj[[1]]] * 100, 2),
+    "% ogółu absolwentów z rocznika ",
+    rocznik,
+    " z województwa ",
+    odmiany$woj_dop,
+    ". W skali całego kraju absolwenci branży ",
+    odmiany$branza_dop,
+    " stanowili ",
+    round(kraj$l_abs[[1]] / sum(l_abs_woj$n) * 100, 2),
+    "% osób kończących naukę w ",
+    odmiany$typ_szk_narz_mn,
+    " w ",
+    params$rok,
+    " roku.\n\n",
+    "Wśród absolwentów ",
+    odmiany$typ_szk_cel_mn,
+    " z rocznika ",
+    rocznik,
+    " dominowali liczebnie reprezentanci zawodów przedstawionych w poniższej tabeli. W tabeli przedstawiono również odsetki absolwentów wykształconych w tych samych zawodach w skali całego kraju.\n\n",
+    sep = ""
+  )
+} else {
+  cat("Liczba absolwentów nie była wystarczająca (poniżej 10 osób), żeby możliwe było przedstawienie wyników dla tej grupy, zgodnie z zasadą chroniącą anonimowość absolwentów.")
+}
+```
+
+```{r, echo=FALSE, message=FALSE, results='asis', fig.align=wyrownanieTabWykr, warning=FALSE}
+if (woj$l_abs[[1]] >= progLiczebnosci & !length(woj$liczebnosc_zawody[[1]]) %in% 0) {
+  cat(
+    "**Tabela ",
+    tab_num(),
+    ": Odsetek absolwentów ",
+    odmiany$typ_szk_cel_mn,
+    " wykształconych w najczęściej występujących zawodach z branży w województwie, w porównaniu z odsetkiem absolwentów wykształconych w tych zawodach wśród absolwentów z tej branży w całym kraju**\n\n",
+    sep = ""
+  )
+  
+  tabela_woj = woj$liczebnosc_zawody[[1]] %>% 
+    as_tibble() %>% 
+    select(nazwa_zaw, n_woj = n, odsetek_woj = odsetek)
+  
+  tabela_kraj = kraj$liczebnosc_zawody[[1]] %>% 
+    as_tibble() %>% 
+    select(nazwa_zaw, n_kraj = n, odsetek_kraj = odsetek)
+  
+  tabela = tabela_woj %>% 
+    left_join(tabela_kraj) %>% 
+    mutate(across(n_woj:odsetek_kraj,
+                  ~ifelse(is.na(.), 0, .)))
+    
+  etykieta = paste0("% wśród absolwentów z branży (N=", woj$l_abs[[1]], ")")
+  naglowek = c(" " = 1, etykieta = 2)
+  names(naglowek) = c(" ", etykieta)
+  
+  tabela = tabela %>% 
+    mutate(across(starts_with("odsetek"),
+                  ~ round(. * 100))) %>%
+    mutate(across(odsetek_woj,
+                  ~ ifelse(n_woj < 10, "n<10", paste0(., "\\% (n=", n_woj, ")")))) %>% 
+    mutate(across(odsetek_kraj,
+                  ~ ifelse(n_kraj < 10, "n<10", paste0(., "\\% (n=", n_kraj, ")")))) %>%
+    slice_max(n = 10, order_by = odsetek_woj) %>% 
+    select(-c(n_woj, n_kraj))
+    
+  tabela %>% 
+    kable("latex", booktabs = TRUE, escape = FALSE, longtable = TRUE,
+          linesep = "",
+          align = c("l", "c", "c"),
+          col.names = NULL,
+          digits = 0) %>% 
+    kable_styling(position = wyrownanieTabWykr,
+                  latex_options = c("hold_position", "repeat_header"),
+                  font_size = 10,
+                  full_width = TRUE,
+                  repeat_header_text = "(ciąg dalszy tabeli)") %>% 
+    add_header_above(c("Zawód", "w województwie" = 1, "w całym kraju" = 1),
+                     align = c("l", "c", "c")) %>% 
+    add_header_above(header = naglowek,
+                     align = c("c")) %>% 
+    column_spec(1, width = "8cm") %>%
+    column_spec(2, width = "3cm") %>%
+    column_spec(3, width = "3cm")
+} else {
+  cat("")
+}
+```
+
+`r ifelse(typDokumentu %in% "pdf", "\\newpage", "")`
+
+# 3. Kontynuowanie edukacji i wykonywanie pracy w `r params$rok` roku
+
+W tym rozdziale prezentowane są 4 statusy absolwentów opisujące ich sytuację edukacyjno-zawodową w różnych momentach. Poniższa tabela przybliża konstrukcję poszczególnych statusów.
+
+```{r, echo=FALSE, message=FALSE, results='asis', fig.align=wyrownanieTabWykr, warning=FALSE}
+data.frame(
+  `Kategoria` = "Znaczenie kategorii",
+  `1. Tylko nauka` = "W takiej sytuacji są osoby, o których wiadomo, że odbywają edukację formalną w Polsce i jednocześnie figurują w rejestrze ZUS z tytułu innego niż aktualne wykonywanie pracy (\"innym tytułem\" może być w szczególności status osoby bezrobotnej, przebywanie na urlopie macierzyńskim lub wychowawczym) lub nie figurują w rejestrze ZUS z żadnego tytułu, w związku z tym ich sytuacja zawodowa nie jest znana. Nie jest wykluczone, że pracują za granicą u zagranicznego pracodawcy lub korzystając z ubezpieczenia w innym systemie niż ZUS (np. KRUS) albo na podstawie umowy o dzieło lub (jeżeli mają nie więcej niż 26 lat) umowy zlecenia albo bez umowy (\"na czarno\").",
+  `2. Nauka i praca` = "W takiej sytuacji są osoby, o których wiadomo, że odbywają edukację formalną w Polsce, a zarazem figurują w rejestrze ZUS z tytułu aktualnego wykonywania pracy etatowej, prowadzenia indywidualnej działalności gospodarczej albo - ale tylko, jeśli mają więcej niż 26 lat - umowy zlecenia. Nie jest natomiast uwzględniana praca za granicą u zagranicznego pracodawcy, praca związana z korzystaniem z ubezpieczenia w innym systemie niż ZUS (np. KRUS), praca na podstawie umowy o dzieło - a w przypadku osób, które mają nie więcej niż 26 lat również praca na podstawie umowy zlecenia - oraz praca bez umowy (\"na czarno\").",
+  `3. Tylko praca` = "W takiej sytuacji są osoby, o których wiadomo, że nie odbywają edukacji formalnej w Polsce (ale być może uczą się w innym kraju), a zarazem figurują w rejestrze ZUS z tytułu aktualnego wykonywania pracy etatowej, umowy zlecenia lub prowadzenia indywidualnej działalności gospodarczej. Nie jest natomiast uwzględniana praca za granicą u zagranicznego pracodawcy, bez umowy (\"na czarno\"), praca związana z korzystaniem z ubezpieczenia w innym systemie niż ZUS (np. KRUS) ani praca na podstawie umowy o dzieło.",
+  `4. Brak nauki i brak pracy` = "W takiej sytuacji są osoby, o których wiadomo, że nie odbywają edukacji formalnej w Polsce (ale być może uczą się w innym kraju), a zarazem figurują w rejestrze ZUS z tytułu bezrobocia lub innego powodu niż aktualne wykonywanie pracy etatowej, umowy zlecenia lub prowadzenie indywidualnej działalności gospodarczej lub nie figurują w rejestrze ZUS z żadnego tytułu, w związku z tym ich sytuacja zawodowa nie jest znana.\nNie jest wykluczone, że pracują za granicą u zagranicznego pracodawcy lub korzystając z ubezpieczenia w innym systemie niż ZUS (np. KRUS) albo na podstawie umowy o dzieło (jeżeli nie są zarejestrowane jako bezrobotne), albo bez umowy (\"na czarno\").",
+  check.names = FALSE) %>% 
+  pivot_longer(everything()) %>% 
+  rename(`Kategoria` = name,
+         `Znaczenie kategorii` = value) %>% 
+  filter(!row_number() %in% 1) %>% 
+  kable(format = "latex",
+        booktabs = TRUE,
+        escape = FALSE,
+        longtable = TRUE,
+        align = "ll",
+        linesep = "\\addlinespace") %>% 
+  kable_styling(position = wyrownanieTabWykr,
+                latex_options = c("hold_position", "repeat_header"),
+                repeat_header_text = "(ciąg dalszy tabeli)") %>% 
+  column_spec(1, width = "4cm") %>%
+  column_spec(2, width = "12cm")
+```
+
+`r ifelse(typDokumentu %in% "pdf", "\\newpage", "")`
+
+```{r, echo=FALSE, message=FALSE, results='asis', fig.align=wyrownanieTabWykr, warning=FALSE}
+if (woj$S3_12[[1]]$n >= progLiczebnosci) {
+  cat(
+    "W grudniu ",
+    params$rok,
+    " roku spośród absolwentów ",
+    odmiany$typ_szk_cel_mn,
+    " z rocznika ",
+    rocznik,
+    " wykształconych w branży ",
+    odmiany$branza_dop,
+    " w województwie ",
+    odmiany$woj_szk_narz,
+    " ",
+    round(woj$S3_12[[1]]$ucz_prac * 100),
+    "% łączyło edukację", 
+    if (woj$typ_szk[[1]] %in% "Branżowa szkoła I stopnia") {
+      paste0(" ")
+    } else {
+      paste0(" na studiach lub ")
+    },
+    "w kolejnej szkole ponadpodstawowej z zatrudnieniem na podstawie umowy o pracę lub z wykonywaniem własnej działalności gospodarczej (samozatrudnieniem)^[W przypadku uczniów i studentów do 26. roku życia nie są dostępne dane dotyczące ewentualnego wykonywania pracy na podstawie umów cywilnoprawnych.]. Odsetek ten był ",
+    case_when(
+      round(woj$S3_12[[1]]$ucz_prac * 100) < round(kraj$S3_12[[1]]$ucz_prac * 100) ~ "niższy niż",
+      round(woj$S3_12[[1]]$ucz_prac * 100) > round(kraj$S3_12[[1]]$ucz_prac * 100) ~ "wyższy niż",
+      round(woj$S3_12[[1]]$ucz_prac * 100) %in% round(kraj$S3_12[[1]]$ucz_prac * 100) ~ "taki sam, jak"
+    ),
+    " wśród absolwentów pozostałych szkół tego samego typu, wykształconych w tej samej branży w całym kraju.\n\nZ kolei ",
+    round(woj$S3_12[[1]]$tylko_ucz * 100),
+    "% absolwentów ",
+    odmiany$typ_szk_cel_mn,
+    " z rocznika ",
+    rocznik,
+    ", wykształconych w branży ",
+    odmiany$branza_dop,
+    " w województwie ",
+    odmiany$woj_szk_narz,
+    " kontynuowało w grudniu ",
+    params$rok,
+    " roku naukę nie będąc etatowymi pracownikami ani nie prowadząc własnej działalności gospodarczej^[W przypadku uczniów i studentów do 26. roku życia nie są dostępne dane dotyczące ewentualnego wykonywania pracy na podstawie umów cywilnoprawnych.]. W całym kraju analogiczny odsetek wynosił ",
+    round(kraj$S3_12[[1]]$tylko_ucz * 100),
+    "%.\n\nW tym samym miesiącu ",
+    round(woj$S3_12[[1]]$tylko_prac * 100),
+    "% absolwentów ",
+    odmiany$typ_szk_cel_mn,
+    " z rocznika ",
+    rocznik,
+    ", wykształconych w branży ",
+    odmiany$branza_dop,
+    " w województwie ",
+    odmiany$woj_szk_narz,
+    " pracowało^[Na podstawie umowy o pracę, umowy cywilnoprawnej lub prowadząc własną działalność gospodarczą.], ale nie uczęszczało do kolejnej szkoły", 
+    if (woj$typ_szk[[1]] %in% "Branżowa szkoła I stopnia") {
+      paste0(". ")
+    } else {
+      paste0(" ani nie studiowało. ")
+    },
+    "Do grupy absolwentów pracujących, ale nie kontynuujących edukacji formalnej należało ",
+    round(kraj$S3_12[[1]]$tylko_prac * 100),
+    "% absolwentów pozostałych szkół tego samego typu, wykształconych w tej samej branży w całym kraju.\n\nDalszych ",
+    round(woj$S3_12[[1]]$neet * 100),
+    "% absolwentów, których sytuacji poświęcony jest ten raport nie kontynuowało nauki ani nie pracowało^[Na podstawie umowy o pracę, na podstawie umowy cywilnoprawnej ani prowadząc własną działalność gospodarczą.]. Do tej grupy należą absolwenci zarejestrowani jako osoby bezrobotne, a także otrzymujący renty lub przebywający na urlopach wychowawczych. W takiej samej sytuacji było ",
+    round(kraj$S3_12[[1]]$neet * 100),
+    "% absolwentów z porównywanej grupy.\n\n",
+    sep = ""
+  )
+} else {
+  cat("Liczba absolwentów nie była wystarczająca (poniżej 10 osób), żeby możliwe było przedstawienie wyników dla tej grupy, zgodnie z zasadą chroniącą anonimowość absolwentów.")
+}
+```
+
+```{r, echo=FALSE, message=FALSE, results='asis', fig.align=wyrownanieTabWykr, warning=FALSE}
+if (woj$S3_12[[1]]$n >= progLiczebnosci) {
+  nazwy_wierszy = c(
+    "Nauka i praca",
+    "Tylko nauka",
+    "Tylko praca",
+    "Brak nauki i brak pracy")
+  
+  tab_wyk = tab_wykres(woj$S3_12[[1]],
+                   kraj$S3_12[[1]],
+                   NULL,
+                   paste0("branży ", odmiany$branza_dop, "\nw województwie ", odmiany$woj_szk_narz),
+                   nazwy_wierszy,
+                   woj$typ_szk[[1]],
+                   80) %>% 
+    mutate(name = ordered(name, levels = c("Brak nauki i brak pracy",
+                                           "Tylko praca",
+                                           "Nauka i praca",
+                                           "Tylko nauka")))
+  
+  levels(tab_wyk$typ)[1] = paste0("Branża ", woj$branza[[1]], "\nWojewództwo ", woj$nazwa_woj[[1]])
+  levels(tab_wyk$typ)[2] = paste0("Branża ", woj$branza[[1]], "\nCały kraj")
+  
+  wykres = wykres_poziomy_statusy(
+    tab_wyk,
+    wrapper(paste0("Wykres ",
+                   wyk_num(),
+                   ": Status edukacyjno-zawodowy absolwentów ",
+                   odmiany$typ_szk_cel_mn, 
+                  "\nz rocznika ",
+                  rocznik,
+                  ", wykształconych w branży w województwie i w kraju, w grudniu\n",
+                  params$rok,
+                  " roku - ogółem (%)"), 80))
+  
+  levels(tab_wyk$typ) = linebreak(levels(tab_wyk$typ), align = "l")
+  
+  tabela = tab_wyk %>% 
+    mutate(across(name,
+                  ~ordered(name,
+                           levels = c("Brak nauki i brak pracy",
+                                      "Tylko praca",
+                                      "Nauka i praca",
+                                      "Tylko nauka"),
+                           labels = c("neet", "tylko_prac", "ucz_prac", "tylko_ucz")))) %>% 
+    select(-lab) %>% 
+    pivot_wider(names_from = name) %>% 
+    select(typ, tylko_ucz, ucz_prac, tylko_prac, neet) %>% 
+    mutate(across(tylko_ucz:neet,
+                  ~ round(. * 100))) %>%
+    mutate(across(tylko_ucz:neet,
+                  ~ paste0(., "\\%"))) %>%
+    kable(format = "latex", booktabs = TRUE, escape = FALSE, longtable = TRUE,
+          linesep = "",
+          align = "lcccc",
+          col.names = NULL,
+          digits = 0) %>% 
+    kable_styling(position = wyrownanieTabWykr,
+                  latex_options = c("hold_position", "repeat_header"),
+                  font_size = 10,
+                  full_width = TRUE,
+                  repeat_header_text = "(ciąg dalszy tabeli)") %>% 
+    add_header_above(c("", "1" = 1, "2" = 1, "3" = 1, "4" = 1),
+                     align = c("l", "c", "c", "c", "c")) %>%
+    add_header_above(c(" ",
+                       "1. Tylko nauka\n2. Nauka i praca\n3. Tylko praca\n4. Brak nauki i brak pracy" = 4),
+                     align = c("c", "l")) %>% 
+    column_spec(1, width = "6cm") %>%
+    column_spec(2, width = "2.25cm") %>%
+    column_spec(3, width = "2.25cm") %>%
+    column_spec(4, width = "2.25cm") %>%
+    column_spec(5, width = "2.25cm")
+  
+  zwroc_wykres_tabela(wykres, tabela)
+}
+```
+
+```{r, echo=FALSE, message=FALSE, results='asis', fig.align=wyrownanieTabWykr, warning=FALSE}
+if (woj$S3_12[[1]]$n >= progLiczebnosci & !length(woj$tab_s3_zaw[[1]]) %in% 0) {
+  cat(
+    "Status edukacyjno-zawodowy absolwentów wykształconych w województwie ",
+    odmiany$woj_szk_narz,
+    " w branży ",
+    odmiany$branza_dop,
+    " różnił się w grudniu ",
+    params$rok,
+    " roku w zależności od zawodu, w którym ukończyli naukę. W poniższej tabeli przedstawiono informację o sytuacji absolwentów w najpopularniejszych zawodach branży ",
+    odmiany$branza_dop,
+    " w województwie ",
+    odmiany$woj_szk_narz,
+    ".\n\n**Tabela ",
+    tab_num(),
+    ": Status edukacyjno-zawodowy absolwentów ",
+    odmiany$typ_szk_cel_mn,
+    " wykształconych w najczęstszych zawodach z branży ",
+    odmiany$branza_dop,
+    " w województwie ",
+    odmiany$woj_szk_narz,
+    "**",
+    sep = ""
+  )
+  
+  tabela = woj$tab_s3_zaw[[1]] %>% 
+    as_tibble()
+  tabela$nazwa_zaw = gsub("Ogółem", "Ogółem*", tabela$nazwa_zaw)
+  
+  tabela = tabela %>% 
+    mutate(across(ucz_prac:neet,
+                  ~ round(. * 100))) %>%
+    mutate(across(ucz_prac:neet,
+                  ~ paste0(., "\\%"))) %>%
+    slice_max(n = 10, order_by = n)
+  
+  tabela = rbind(tabela %>% filter(!nazwa_zaw %in% "Ogółem*"),
+                 tabela %>% filter(nazwa_zaw %in% "Ogółem*")) %>% 
+    select(nazwa_zaw, tylko_ucz, ucz_prac, tylko_prac, neet)
+  
+  tabela %>% 
+    kable("latex", booktabs = TRUE, escape = FALSE, longtable = TRUE,
+          linesep = "",
+          align = c("l", "c", "c", "c", "c"),
+          col.names = NULL,
+          digits = 0) %>% 
+    kable_styling(position = wyrownanieTabWykr,
+                  latex_options = c("hold_position", "repeat_header"),
+                  font_size = 10,
+                  full_width = TRUE,
+                  repeat_header_text = "(ciąg dalszy tabeli)") %>% 
+    add_header_above(c("", "1" = 1, "2" = 1, "3" = 1, "4" = 1),
+                     align = c("l", "l", "l", "l", "l")) %>% 
+    add_header_above(c(" ",
+                       "1. Tylko nauka\n2. Nauka i praca\n3. Tylko praca\n4. Brak nauki i brak pracy" = 4),
+                     align = c("l")) %>% 
+    column_spec(1, width = "8cm") %>%
+    column_spec(2, width = "1.75cm") %>%
+    column_spec(3, width = "1.75cm") %>%
+    column_spec(4, width = "1.75cm") %>%
+    column_spec(5, width = "1.75cm") %>% 
+  footnote(general = "*W kategorii ‘Ogółem’ uwzględniono wyłącznie absolwentów zawodów, w których kształciło się po minimum 10 osób.", general_title = "")
+}
+```
+
+```{r, echo=FALSE, message=FALSE, results='asis', fig.align=wyrownanieTabWykr, warning=FALSE}
+if (woj$S3_12[[1]]$n >= progLiczebnosci) {
+  sty_sier = c(
+    "styczniu" = round(woj$S3_01[[1]]$ucz_prac * 100),
+    "lutym" = round(woj$S3_02[[1]]$ucz_prac * 100), 
+    "marcu" = round(woj$S3_03[[1]]$ucz_prac * 100),
+    "kwietniu" = round(woj$S3_04[[1]]$ucz_prac * 100),
+    "maju" = round(woj$S3_05[[1]]$ucz_prac * 100),
+    "czerwcu" = round(woj$S3_06[[1]]$ucz_prac * 100),
+    "lipcu" = round(woj$S3_07[[1]]$ucz_prac * 100),
+    "sierpniu" = round(woj$S3_08[[1]]$ucz_prac * 100))
+  
+  wrz_gru = c(
+    "wrześniu" = round(woj$S3_09[[1]]$ucz_prac * 100) + round(woj$S3_09[[1]]$tylko_prac * 100),
+    "październiku" = round(woj$S3_10[[1]]$ucz_prac * 100) + round(woj$S3_10[[1]]$tylko_prac * 100), 
+    "listopadzie" = round(woj$S3_11[[1]]$ucz_prac * 100) + round(woj$S3_11[[1]]$tylko_prac * 100),
+    "grudniu" = round(woj$S3_12[[1]]$ucz_prac * 100) + round(woj$S3_12[[1]]$tylko_prac * 100))
+  
+  cat(
+    "W ",
+    params$rok,
+    " roku zmieniały się proporcje pomiędzy grupami uczniów i absolwentów wykształconych w branży ",
+    odmiany$branza_dop,
+    " w województwie ",
+    odmiany$woj_szk_narz,
+    ", wyodrębnionymi ze względu na aktywność edukacyjną i zawodową.\n\nW okresie od stycznia do sierpnia ",
+    params$rok,
+    " roku^[Tj. do momentu, kiedy obecni absolwenci danej szkoły przestali być jej uczniami.] odsetek uczniów ostatnich klas szkół pracujących na podstawie umowy o pracę^[W tym na podstawie umowy o pracę w celu przygotowania zawodowego. W tym okresie dla żadnego z obecnych absolwentów z branży w województwie nie możemy zaobserwować zatrudnienia na podstawie umowy zlecenia, ponieważ byli jeszcze uczniami - w przypadku uczniów i studentów do 26. roku życia nie są dostępne dane dotyczące ewentualnego wykonywania pracy na podstawie umów zleceń] lub samozatrudnionych wynosił ",
+    if (length(unique(sty_sier)) %in% 1) {
+      paste0(round(woj$S3_01[[1]]$ucz_prac * 100), "%.\n\n")
+    } else {
+      paste0(
+        "od ",
+        min(sty_sier),
+        "% (w ",
+        paste(names(sty_sier[sty_sier == min(sty_sier)]), collapse = ", "),
+        ") do ",
+        max(sty_sier),
+        "% (w ",
+        paste(names(sty_sier[sty_sier == max(sty_sier)]), collapse = ", "),
+        ").\n\n",
+        sep = ""
+      )
+    },
+    "Natomiast w okresie od września do grudnia ",
+    params$rok,
+    " roku odsetek absolwentów wykształconych w branży ",
+    odmiany$branza_dop,
+    " w województwie ",
+    odmiany$woj_szk_narz,
+    " pracujących na podstawie umowy o pracę, samozatrudnionych, a także - w przypadku osób niekontynuujących nauki - pracujących na podstawie umowy zlecenia wynosił łącznie ",
+    if (length(unique(wrz_gru)) %in% 1) {
+      paste0(round(woj$S3_09[[1]]$ucz_prac * 100) + round(woj$S3_09[[1]]$tylko_prac * 100), "%.")
+    } else {
+      paste0(
+        "od ",
+        min(wrz_gru),
+        ifelse(any(names(wrz_gru)[wrz_gru == min(wrz_gru)] %in% "wrześniu"), paste0("% (we "), paste0("% (w ")),
+        paste(names(wrz_gru)[wrz_gru == min(wrz_gru)], collapse = ", "),
+        ") do ",
+        max(wrz_gru),
+        ifelse(any(names(wrz_gru)[wrz_gru == max(wrz_gru)] %in% "wrześniu"), paste0("% (we "), paste0("% (w ")),
+        paste(names(wrz_gru)[wrz_gru == max(wrz_gru)], collapse = ", "),
+        ").",
+        sep = ""
+      )
+    },
+    " Bardziej szczegółowe wyniki, uwzględniające również to czy absolwenci się uczyli, przedstawia poniższy wykres.\n\n",
+    sep = ""
+  )
+}
+```
+
+```{r, echo=FALSE, message=FALSE, results='asis', fig.align=wyrownanieTabWykr, warning=FALSE}
+szkoly_month = rbind(
+  as_tibble(woj$S3_01[[1]]),
+  as_tibble(woj$S3_02[[1]]),
+  as_tibble(woj$S3_03[[1]]),
+  as_tibble(woj$S3_04[[1]]),
+  as_tibble(woj$S3_05[[1]]),
+  as_tibble(woj$S3_06[[1]]),
+  as_tibble(woj$S3_07[[1]]),
+  as_tibble(woj$S3_08[[1]]),
+  as_tibble(woj$S3_09[[1]]),
+  as_tibble(woj$S3_10[[1]]),
+  as_tibble(woj$S3_11[[1]]),
+  as_tibble(woj$S3_12[[1]]))
+
+if (min(szkoly_month$n) >= progLiczebnosci) {
+  tab_szk = szkoly_month %>%
+    mutate(month = 1:12) %>% 
+    select(-n) %>% 
+    pivot_longer(ucz_prac:neet) %>% 
+    mutate(across(name,
+                  ~case_when(
+                    . %in% "ucz_prac" ~ "Nauka i praca",
+                    . %in% "tylko_ucz" ~ "Tylko nauka",
+                    . %in% "tylko_prac" ~ "Tylko praca",
+                    . %in% "neet" ~ "Brak nauki i brak pracy"))) %>% 
+    mutate(lab = ifelse(round(value, 2) >= 0.06,
+                        paste0(round(value * 100), "%"),
+                        "")) %>% 
+    mutate(name = ordered(name, levels = c("Brak nauki i brak pracy",
+                                           "Tylko praca",
+                                           "Nauka i praca",
+                                           "Tylko nauka")))
+  
+  wykres = wave_chart(tab_szk,
+             wrapper(paste0("Wykres ",
+                            wyk_num(),
+                            ": Status edukacyjno-zawodowy absolwentów wykształconych w branży w województwie w poszczególnych miesiącach ",
+                            params$rok,
+                            " roku - ogółem (%)"), 80)) +
+    scale_x_continuous(n.breaks = 12,
+                       # muszę dać to "0" = "NA", żeby mi się zaczynało od stycznia
+                       labels = c("0" = "NA", "1" = "sty", "2" = "lut", "3" = "mar", "4" = "kwi", "5" = "maj", "6" = "cze", "7" = "lip", "8" = "sie", "9" = "wrz", "10" = "paź", "11" = "lis", "12" = "gru"))
+  
+  tabelka = szkoly_month %>%
+    mutate(month = 1:12) %>% 
+    select(-n) %>% 
+    mutate(across(ucz_prac:neet,
+                  ~ round(. * 100))) %>%
+    mutate(across(ucz_prac:neet,
+                  ~ paste0(., "\\%"))) %>% 
+    pivot_longer(-month, names_to = "mies") %>%
+    pivot_wider(names_from = month, values_from = value) %>% 
+    mutate(mies = ordered(mies,
+                          levels = c(
+                            "tylko_ucz",
+                            "ucz_prac",
+                            "tylko_prac",
+                            "neet"),
+                          labels = c(
+                            "Tylko nauka",
+                            "Nauka i praca",
+                            "Tylko praca",
+                            "Brak nauki i brak pracy"))) %>% 
+    arrange(mies) %>% 
+    kable("latex", booktabs = TRUE, escape = FALSE, longtable = TRUE,
+          linesep = "",
+          align = "lcccccccccccc",
+          col.names = NULL,
+          digits = 0) %>% 
+    kable_styling(position = wyrownanieTabWykr,
+                  latex_options = c("hold_position", "repeat_header"),
+                  font_size = 10,
+                  full_width = TRUE,
+                  repeat_header_text = "(ciąg dalszy tabeli)") %>% 
+    add_header_above(c("", "sty" = 1, "lut" = 1, "mar" = 1, "kwi" = 1, "maj" = 1, "cze" = 1, "lip" = 1, "sie" = 1, "wrz" = 1, "paź" = 1, "lis" = 1, "gru" = 1),
+                     align = c("l", "c", "c", "c", "c", "c", "c", "c", "c", "c", "c", "c", "c")) %>% 
+    column_spec(1, width = "3.9cm") %>%
+    column_spec(2, width = "0.7cm") %>%
+    column_spec(3, width = "0.7cm") %>%
+    column_spec(4, width = "0.7cm") %>%
+    column_spec(5, width = "0.7cm") %>%
+    column_spec(6, width = "0.7cm") %>%
+    column_spec(7, width = "0.7cm") %>% 
+    column_spec(8, width = "0.7cm") %>%
+    column_spec(9, width = "0.7cm") %>%
+    column_spec(10, width = "0.7cm") %>%
+    column_spec(11, width = "0.7cm") %>%
+    column_spec(12, width = "0.7cm") %>%
+    column_spec(13, width = "0.7cm")
+  
+  zwroc_wykres_tabela(wykres, tabelka)
+}
+```
+
+`r ifelse(typDokumentu %in% "pdf", "\\newpage", "")`
+
+# 4. Przychody absolwentów z pracy etatowej w okresie od września do grudnia `r params$rok` roku w odniesieniu do średniego wynagrodzenia w powiatach, w których mieszkali
+
+Wskaźnik, którego wartości prezentujemy w tej części raportu, pokazuje stosunek przychodów absolwentów wykształconych w branży `r odmiany$branza_dop` w województwie `r odmiany$woj_szk_narz` z pracy etatowej^[Średnią (arytmetyczną) obliczono wyłącznie dla miesięcy, w których absolwenci pracowali. Nie uwzględniono przychodów osób, które przekroczyły kwotę rocznego ograniczenia podstawy wymiaru składek na ubezpieczenie emerytalne i rentowe (tj. 30 krotność prognozowanego wynagrodzenia brutto, czyli w 2022 roku przeciętne miesięczne zarobki na poziomie 177 660 zł), w miesiącach, w których to przekroczenie wystąpiło.] do przeciętnego miesięcznego wynagrodzenia^[Według danych publikowanych w [Banku Danych Lokalnych Głównego Urzędu Statystycznego](https://stat.gov.pl/metainformacje/slownik-pojec/pojecia-stosowane-w-statystyce-publicznej/693,pojecie.html?pdf=1)] osób mieszkających w tych samych powiatach. Dla poszczególnych absolwentów wartość wskaźnika równa 100% oznaczałaby, że ich średnie zarobki z pracy etatowej były takie same, jak przeciętne wynagrodzenie mieszkańców danego powiatu. 
+
+Należy zastrzec, że kwoty te nie są porównywalne ze względu na różnice w sposobie ich obliczania. Informacje dotyczące miesięcznych przychodów absolwentów nie uwzględniają czasu, jaki poświęcili na pracę (przychody te nie zostały przeliczone np. do wymiaru pełnego etatu). Natomiast wyrażenie przychodów z pracy uzyskiwanych przez absolwentów jako odsetka przeciętnego miesięcznego wynagrodzenia w danym powiecie podawanego przez GUS, pozwala uwzględnić lokalny kontekst. Ponadto przedstawianie wartości wskaźnika w ten sposób jest bardziej dogodne do porównywania przychodów uzyskiwanych przez absolwentów w kolejnych latach niż prezentowanie przychodów w złotych, na których wartość wpływa inflacja.
+
+Na poniższej ilustracji opisano sposób prezentowania danych na wykresie typu boxplot wraz z ich interpretacją. Dane na tym wykresie są fikcyjne – służy on tylko objaśnieniu jakiego rodzaju informacje można znaleźć na tego typu wykresach.
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, out.width = '100%'}
+knitr::include_graphics("../boxplot_edycja2.png")
+```
+
+### Absolwenci kontynuujący naukę
+
+```{r, echo=FALSE, message=FALSE, results='asis', fig.align=wyrownanieTabWykr, warning=FALSE}
+if (woj$W3_ucz[[1]]$n >= progLiczebnosci) {
+  cat(
+    "Mediana średnich miesięcznych przychodów z pracy absolwentów wykształconych w branży ",
+    odmiany$branza_dop,
+    " w województwie ",
+    odmiany$woj_szk_narz,
+    ", zatrudnionych na podstawie umowy o pracę i kontynuujących naukę, wynosiła ",
+    round(woj$W3_ucz[[1]]$med * 100),
+    "% średnich wynagrodzeń mieszkańców powiatów, w których mieszkali.\n\nDla pracujących na etat i kontynuujących edukację absolwentów pozostałych ",
+    odmiany$typ_szk_cel_mn,
+    " z branży ",
+    odmiany$branza_dop,
+    " w całym kraju mediana wynosiła ",
+    round(kraj$W3_ucz[[1]]$med * 100),
+    "%.",
+    sep = ""
+  )
+} else {
+  cat("Liczba absolwentów pracujących na etat i kontynuujących naukę na uczelni lub w szkole policealnej nie była wystarczająca, żeby możliwe było przedstawienie wyników dla tej grupy, zgodnie z zasadą chroniącą anonimowość absolwentów.")
+}
+```
+
+```{r, echo=FALSE, message=FALSE, results='asis', fig.align=wyrownanieTabWykr, warning=FALSE}
+if (woj$W3_ucz[[1]]$n >= progLiczebnosci) {
+  etykiety = c("sred", "q5", "q25", "med", "q75", "q95")
+  
+  tab_wyk = tab_wykres(woj$W3_ucz[[1]],
+                       kraj$W3_ucz[[1]],
+                       NULL,
+                       paste0("branży ", odmiany$branza_dop, "\nw województwie ", odmiany$woj_szk_narz),
+                       etykiety,
+                       woj$typ_szk[[1]],
+                       80) %>% 
+    select(-lab) %>% 
+    pivot_wider(names_from = name) %>% 
+    select(-sred)
+  
+  levels(tab_wyk$typ)[1] = paste0("Branża ", woj$branza[[1]], "\nWojewództwo ", woj$nazwa_woj[[1]])
+  levels(tab_wyk$typ)[2] = paste0("Branża ", woj$branza[[1]], "\nCały kraj")
+  
+  wyk_lab = tab_wyk %>% 
+    group_by(typ) %>% 
+    summarise(value = list(q5, q25, med, q75, q95)) %>% 
+    unnest() %>% 
+    mutate(lab = paste0(round(value * 100), "%"))
+  
+  wyk_tyt = wrapper(paste0("Wykres ",
+                           wyk_num(),
+                           ": Średni miesięczny przychód brutto z pracy uzyskiwany przez absolwentów wykształconych w branży w województwie oraz w całym kraju w odniesieniu do przeciętnego miesięcznego wynagrodzenia brutto w poszczególnych zamieszkiwanych przez nich powiatach, od września do grudnia ",
+                           params$rok,
+                           " roku - pracujący i kontynuujący naukę"),
+                    width = 85)
+  
+  wykres = boxplot_proc(tab_wyk, wyk_tyt) +
+    ylab("Przychody absolwentów z pracy etatowej\nw odniesieniu do przeciętnego\nwynagrodzenia w powiatach") +
+    geom_text(data = wyk_lab,
+              aes(x = typ, y = value, label = lab),
+              nudge_x = -0.4,
+              size = 2.5)
+  
+  print(wykres)
+  
+  cat(
+    "\\textcolor{black}{\\relscale{0.75}Na powyższym wykresie pogrubiona linia oznacza medianę wartości prezentowanego wskaźnika Elementem wykresu jest również prostokąt reprezentujący tzw. rozstęp międzyćwiartkowy. Prostokąt ten \"obejmuje\" 50\\% absolwentów, którzy stanowią grupę środkową pod względem wartości analizowanego wskaźnika. Z kolei nad i pod prostokątem znajdują się poziome linie (tzw. wąsy). Pomiędzy tymi liniami zawierają się wartości wskaźnika dla \"środkowych\" 90\\% absolwentów. Im bardziej zróżnicowane są wartości wskaźnika w danej grupie, tym prostokąt jest wyższy, a odległość pomiędzy wspomnianymi liniami większa.}\n\n",
+    sep = ""
+  )
+}
+```
+
+### Absolwenci niekontynuujący nauki
+
+```{r, echo=FALSE, message=FALSE, results='asis', fig.align=wyrownanieTabWykr, warning=FALSE}
+if (woj$W3_nie_ucz[[1]]$n >= progLiczebnosci) {
+  cat(
+    "Mediana średnich miesięcznych przychodów z pracy absolwentów wykształconych w branży ",
+    odmiany$branza_dop,
+    " w województwie ",
+    odmiany$woj_szk_narz,
+    ", zatrudnionych na podstawie umowy o pracę i niekontynuujących nauki wynosiła ",
+    round(woj$W3_nie_ucz[[1]]$med * 100),
+    "% średnich wynagrodzeń mieszkańców powiatów, w których mieszkali.\n\nDla pracujących na etat i niekontynuujących edukacji absolwentów pozostałych ",
+    odmiany$typ_szk_cel_mn,
+    " z branży ",
+    odmiany$branza_dop,
+    " w całym kraju mediana wynosiła ",
+    round(kraj$W3_nie_ucz[[1]]$med * 100),
+    "%.",
+    sep = ""
+  )
+} else {
+  cat("Liczba absolwentów pracujących na etat i niekontynuujących nauki na uczelni ani w szkole policealnej nie była wystarczająca, żeby możliwe było przedstawienie wyników dla tej grupy, zgodnie z zasadą chroniącą anonimowość absolwentów.")
+}
+```
+
+```{r, echo=FALSE, message=FALSE, results='asis', fig.align=wyrownanieTabWykr, warning=FALSE}
+if (woj$W3_nie_ucz[[1]]$n >= progLiczebnosci) {
+  etykiety = c("sred", "q5", "q25", "med", "q75", "q95")
+  
+  tab_wyk = tab_wykres(woj$W3_nie_ucz[[1]],
+                       kraj$W3_nie_ucz[[1]],
+                       NULL,
+                       paste0("branży ", odmiany$branza_dop, "\nw województwie ", odmiany$woj_szk_narz),
+                       etykiety,
+                       woj$typ_szk[[1]],
+                       80) %>% 
+    select(-lab) %>% 
+    pivot_wider(names_from = name) %>% 
+    select(-sred)
+  
+  levels(tab_wyk$typ)[1] = paste0("Branża ", woj$branza[[1]], "\nWojewództwo ", woj$nazwa_woj[[1]])
+  levels(tab_wyk$typ)[2] = paste0("Branża ", woj$branza[[1]], "\nCały kraj")
+  
+  wyk_lab = tab_wyk %>% 
+    group_by(typ) %>% 
+    summarise(value = list(q5, q25, med, q75, q95)) %>% 
+    unnest() %>% 
+    mutate(lab = paste0(round(value * 100), "%"))
+  
+  wyk_tyt = wrapper(paste0("Wykres ",
+                           wyk_num(),
+                           ": Średni miesięczny przychód brutto z pracy uzyskiwany przez absolwentów wykształconych w branży w województwie oraz w całym kraju w odniesieniu do przeciętnego miesięcznego wynagrodzenia brutto w poszczególnych zamieszkiwanych przez nich powiatach, od września do grudnia ",
+                           params$rok,
+                           " roku - pracujący i niekontynuujący nauki"),
+           width = 85)
+  
+  wykres = boxplot_proc(tab_wyk, wyk_tyt) +
+    ylab("Przychody absolwentów z pracy etatowej\nw odniesieniu do przeciętnego\nwynagrodzenia w powiatach") +
+    geom_text(data = wyk_lab,
+              aes(x = typ, y = value, label = lab),
+              nudge_x = -0.4,
+              size = 2.5)
+  
+  print(wykres)
+  
+  cat(
+    "\\textcolor{black}{\\relscale{0.75}Na powyższym wykresie pogrubiona linia oznacza medianę wartości prezentowanego wskaźnika Elementem wykresu jest również prostokąt reprezentujący tzw. rozstęp międzyćwiartkowy. Prostokąt ten \"obejmuje\" 50\\% absolwentów, którzy stanowią grupę środkową pod względem wartości analizowanego wskaźnika. Z kolei nad i pod prostokątem znajdują się poziome linie (tzw. wąsy). Pomiędzy tymi liniami zawierają się wartości wskaźnika dla \"środkowych\" 90\\% absolwentów. Im bardziej zróżnicowane są wartości wskaźnika w danej grupie, tym prostokąt jest wyższy, a odległość pomiędzy wspomnianymi liniami większa.}\n\n",
+    sep = ""
+  )
+}
+```
+
+`r ifelse(typDokumentu %in% "pdf", "\\newpage", "")`
+
+# 5. Bezrobocie rejestrowane od września do grudnia `r params$rok` roku
+
+Pomiędzy ukończeniem `r odmiany$typ_szk_bier` a końcem roku kalendarzowego, w którym to nastąpiło (tj. w okresie od września do grudnia `r params$rok` roku) poszczególni absolwenci mogli być zarejestrowani jako bezrobotni w ciągu maksymalnie czterech miesięcy. Wskaźnik przyjąłby maksymalną wartość, gdyby wszyscy absolwenci w każdym z tych miesięcy byli zarejestrowani jako osoby bezrobotne. Natomiast wartość minimalną (zero miesięcy) - gdyby żaden z nich nie był bezrobotny nawet przez krótki okres.
+
+```{r, echo=FALSE, message=FALSE, results='asis', fig.align=wyrownanieTabWykr, warning=FALSE, fig.height=3}
+if (woj$l_abs[[1]] >= progLiczebnosci) {
+  cat(
+    "Średnia liczba miesięcy bezrobocia rejestrowanego, obliczona dla wszystkich absolwentów ",
+    odmiany$typ_szk_cel_mn,
+    " z województwa ",
+    odmiany$woj_dop,
+    ", wykształconych w zawodach należących do branży ",
+    odmiany$branza_dop,
+    " wyniosła ",
+    round(woj$B2_bezrob[[1]]$srednia, 2),
+    ", natomiast mediana ",
+    woj$B2_bezrob[[1]]$mediana,
+    ". W skali całego kraju średnia liczba miesięcy bezrobocia rejestrowanego absolwentów ",
+    odmiany$typ_szk_cel_mn,
+    " z tej branży wynosiła ",
+    round(kraj$B2_bezrob[[1]]$srednia, 2),
+    ", a mediana ",
+    kraj$B2_bezrob[[1]]$mediana,
+    ".\n\nWśród absolwentów ",
+    odmiany$typ_szk_cel_mn,
+    " z województwa ",
+    odmiany$woj_dop,
+    ", wykształconych w zawodach należących do branży ",
+    odmiany$branza_dop,
+    " ",
+    round(woj$B2_bezrob[[1]]$value[woj$B2_bezrob[[1]]$l_mies_bezrob %in% 0] * 100),
+    "% w rozpatrywanym okresie w ogóle nie było zarejestrowanych jako osoby bezrobotne, natomiast ",
+    round(woj$B2_bezrob[[1]]$value[woj$B2_bezrob[[1]]$l_mies_bezrob %in% 4] * 100),
+    "% pozostawało w rejestrze przez cały ten okres. W skali całego kraju analogiczne wartości wskaźników, dla absolwentów ",
+    odmiany$typ_szk_cel_mn,
+    " wykształconych w zawodach należących do branży wynosiły ",
+    round(kraj$B2_bezrob[[1]]$value[woj$B2_bezrob[[1]]$l_mies_bezrob %in% 0] * 100),
+    "% oraz ",
+    round(kraj$B2_bezrob[[1]]$value[woj$B2_bezrob[[1]]$l_mies_bezrob %in% 4] * 100),
+    "%.\n\n",
+    sep = ""
+  )
+  
+  wyk_tyt = wrapper(paste0("Wykres ",
+                           wyk_num(),
+                           ": Odsetek absolwentów wykształconych w branży w województwie oraz w całym kraju, którzy byli bierni edukacyjnie i zawodowo przez daną liczbę miesięcy, od września do grudnia ",
+                           params$rok,
+                           " roku"),
+                    width = 85)
+  
+  tab_wyk = tab_facet(woj$B2_bezrob[[1]],
+                      kraj$B2_bezrob[[1]],
+                      NULL,
+                      paste0("branży ", odmiany$branza_dop, "\nw województwie ", odmiany$woj_szk_narz),
+                      woj$typ_szk[[1]],
+                      80)
+  
+  levels(tab_wyk$typ)[1] = paste0("Branża ", woj$branza[[1]], "\nWojewództwo ", woj$nazwa_woj[[1]])
+  levels(tab_wyk$typ)[2] = paste0("Branża ", woj$branza[[1]], "\nCały kraj")
+  
+  wykres = wyk_facet(tab_wyk,
+            wyk_tyt,
+            "mies",
+            "Liczba miesięcy bezrobocia") +
+    geom_text(data = tab_wyk,
+              aes(x = mies, y = value, label = lab, group = typ),
+              nudge_y = 0.03,
+              size = 2.5)
+  
+  levels(tab_wyk$typ) = linebreak(levels(tab_wyk$typ), align = "l")
+  
+  tab_wyk = tab_wyk %>%
+    select(-lab) %>% 
+    pivot_wider(names_from = mies) %>%
+    mutate(across(2:6,
+                  ~ round(. * 100))) %>%
+    mutate(across(2:6,
+                  ~ paste0(., "\\%"))) %>%
+    kable("latex", booktabs = TRUE, escape = FALSE, longtable = TRUE,
+          linesep = "",
+          align = "lccccc",
+          col.names = NULL,
+          digits = 0) %>%
+    kable_styling(position = wyrownanieTabWykr,
+                  latex_options = c("hold_position", "repeat_header"),
+                  font_size = 10,
+                  full_width = FALSE,
+                  repeat_header_text = "(ciąg dalszy tabeli)") %>%
+    add_header_above(c(" ", "Brak\nbezrobocia" = 1, "1 miesiąc" = 1, "2 miesiące" = 1, "3 miesiące" = 1, "4 miesiące" = 1),
+                     align = c("l", "c", "c", "c", "c", "c"))
+  
+  zwroc_wykres_tabela(wykres, tab_wyk)
+} else {
+  cat("Liczba absolwentów nie była wystarczająca (poniżej 10 osób), żeby możliwe było przedstawienie wyników dla tej grupy, zgodnie z zasadą chroniącą anonimowość absolwentów.")
+}
+```
