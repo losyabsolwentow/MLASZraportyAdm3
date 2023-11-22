@@ -36,6 +36,7 @@ tab_wykres = function(dane_szk, dane_god, dane_kraj, nazwa_god, etykiety, typ_sz
   
   szkola = case_when(
     typ_szk %in% "Branżowa szkoła I stopnia" ~ "branżowe szkoły I stopnia",
+    typ_szk %in% "Branżowa szkoła II stopnia" ~ "branżowe szkoły II stopnia",
     typ_szk %in% "Technikum" ~ "technika",
     typ_szk %in% "Szkoła policealna" ~ "szkoły policealne",
     typ_szk %in% "Liceum ogólnokształcące" ~ "licea",
@@ -84,9 +85,13 @@ tab_wykres = function(dane_szk, dane_god, dane_kraj, nazwa_god, etykiety, typ_sz
       mutate(lab = ifelse(round(value, 2) >= 0.06,
                           paste0(round(value * 100), "%"),
                           ""),
-             typ = ifelse(typ_szk %in% "Branżowa szkoła I stopnia",
-                          "Branżowe szkoły I stopnia\nw całej Polsce",
-                          paste0(str_to_sentence(szkola), "\nw całej Polsce")))
+             # typ = ifelse(typ_szk %in% "Branżowa szkoła I stopnia",
+             #              "Branżowe szkoły I stopnia\nw całej Polsce",
+             #              paste0(str_to_sentence(szkola), "\nw całej Polsce")),
+             typ = case_when(
+               typ_szk %in% "Branżowa szkoła I stopnia" ~ "Branżowe szkoły I stopnia\nw całej Polsce",
+               typ_szk %in% "Branżowa szkoła II stopnia" ~ "Branżowe szkoły II stopnia\nw całej Polsce",
+               TRUE ~ paste0(str_to_sentence(szkola), "\nw całej Polsce")))
     
     tab_kraj$name = etykiety
   } else {
@@ -141,6 +146,7 @@ tab_facet = function(dane_szk, dane_god, dane_kraj, nazwa_god, typ_szk, szer = 8
   
   szkola = case_when(
     typ_szk %in% "Branżowa szkoła I stopnia" ~ "branżowe szkoły I stopnia",
+    typ_szk %in% "Branżowa szkoła II stopnia" ~ "branżowe szkoły II stopnia",
     typ_szk %in% "Technikum" ~ "technika",
     typ_szk %in% "Szkoła policealna" ~ "szkoły policealne",
     typ_szk %in% "Liceum ogólnokształcące" ~ "licea",
@@ -161,7 +167,7 @@ tab_facet = function(dane_szk, dane_god, dane_kraj, nazwa_god, typ_szk, szer = 8
   } else {
     tab_szk = NULL
   }
-
+  
   if (!is.null(dane_god)) {
     tab_god = dane_god %>%
       as_tibble() %>%
@@ -172,21 +178,22 @@ tab_facet = function(dane_szk, dane_god, dane_kraj, nazwa_god, typ_szk, szer = 8
   } else {
     tab_god = NULL
   }
-
+  
   if (!is.null(dane_kraj)) {
     tab_kraj = dane_kraj %>%
       as_tibble() %>%
       select(mies =  starts_with("l_mies_"), value, -c(srednia, mediana)) %>%
-      mutate(typ = ifelse(typ_szk %in% "Branżowa szkoła I stopnia",
-                          "Branżowe szkoły I stopnia\nw całej Polsce",
-                          paste0(str_to_sentence(szkola), "\nw całej Polsce"))) %>%
+      mutate(typ = case_when(
+        typ_szk %in% "Branżowa szkoła I stopnia" ~ "Branżowe szkoły I stopnia\nw całej Polsce",
+        typ_szk %in% "Branżowa szkoła II stopnia" ~ "Branżowe szkoły II stopnia\nw całej Polsce",
+        TRUE ~ paste0(str_to_sentence(szkola), "\nw całej Polsce"))) %>%
       arrange(mies) %>% 
       mutate(lab = paste0(round(value * 100), "%"))
     
   } else {
     tab_kraj = NULL
   }
-
+  
   kolejnosc = ordered(c(ifelse(!is.null(tab_szk$typ), unique(tab_szk$typ), "1"),
                         ifelse(!is.null(tab_god$typ), unique(tab_god$typ), "2"),
                         ifelse(!is.null(tab_kraj$typ), unique(tab_kraj$typ), "3")),

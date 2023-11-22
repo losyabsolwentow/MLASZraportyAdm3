@@ -170,6 +170,8 @@ Niektóre wyniki dotyczące absolwentów Państwa szkoły zostały zestawione z 
 
 **Ze względu na potrzebę zachowania anonimowości absolwentów, dane dla grup liczących poniżej 10 osób nie są prezentowane również w przypadku absolwentów Państwa szkoły.** W celu zachowania czytelności, na wykresach nie są umieszczane wartości etykiet poniżej 6%.
 
+`r ifelse(typDokumentu %in% "pdf", "\\newpage", "")`
+
 ## Prośba o wypełnienie krótkiej ankiety zwrotnej dla IBE
 
 System monitoringu karier oparty na danych administracyjnych będzie rozwijany w kolejnych latach. W dalszym dostosowywaniu go do potrzeb szkół bardzo przydatne będą Państwa opinie. Dlatego będziemy wdzięczni za wypełnienie kolejnej ankiety on-line przygotowanej przez Instytut Badań Edukacyjnych, który jest odpowiedzialny za opracowanie wyników monitoringu. 
@@ -181,6 +183,10 @@ Wyniki wypełnionej przez Państwa ankiety nie będą prezentowane w powiązaniu
 **Ankieta otworzy się w przeglądarce internetowej po kliknięciu w link:**
 
 `r szk$link`
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, out.width = '100%'}
+knitr::include_graphics(szk$qr_code)
+```
 
 W każdym raporcie szkolnym umieszczono inny link do ankiety. Po wypełnieniu, ankieta nie będzie już dla Państwa dostępna. W przypadku prośby o podanie kodu dostępu prosimy wpisać następujący ciąg znaków: `r szk$token`
 
