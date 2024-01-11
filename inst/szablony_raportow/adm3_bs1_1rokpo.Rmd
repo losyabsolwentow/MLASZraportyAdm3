@@ -508,13 +508,7 @@ if (szk$S3_12[[1]]$n >= progLiczebnosci) {
 
 ```{r, echo=FALSE, message=FALSE, results='asis', fig.align=wyrownanieTabWykr, warning=FALSE}
 if (szk$S3_12[[1]]$n >= progLiczebnosci) {
-  sty_sier = c(
-    "styczniu" = round(szk$S3_01[[1]]$ucz_prac * 100),
-    "lutym" = round(szk$S3_02[[1]]$ucz_prac * 100), 
-    "marcu" = round(szk$S3_03[[1]]$ucz_prac * 100),
-    "kwietniu" = round(szk$S3_04[[1]]$ucz_prac * 100),
-    "maju" = round(szk$S3_05[[1]]$ucz_prac * 100),
-    "czerwcu" = round(szk$S3_06[[1]]$ucz_prac * 100),
+  lip_sier = c(
     "lipcu" = round(szk$S3_07[[1]]$ucz_prac * 100),
     "sierpniu" = round(szk$S3_08[[1]]$ucz_prac * 100))
   
@@ -527,21 +521,21 @@ if (szk$S3_12[[1]]$n >= progLiczebnosci) {
   cat(
     "W ",
     params$rok,
-    " roku zmieniały się proporcje pomiędzy grupami uczniów i absolwentów Państwa szkoły, wyodrębnionymi ze względu na aktywność edukacyjną i zawodową.\n\nW okresie od stycznia do sierpnia ",
+    " roku zmieniały się proporcje pomiędzy grupami uczniów i absolwentów Państwa szkoły, wyodrębnionymi ze względu na aktywność edukacyjną i zawodową.\n\nW okresie od lipca do sierpnia ",
     params$rok,
     " roku^[Tj. do momentu, kiedy obecni absolwenci Państwa szkoły przestali być jej uczniami.] odsetek uczniów ostatnich klas Państwa szkoły pracujących na podstawie umowy o pracę^[W tym na podstawie umowy o pracę w celu przygotowania zawodowego. W tym okresie dla żadnego z obecnych absolwentów Państwa szkoły nie możemy zaobserwować zatrudnienia na podstawie umowy zlecenia, ponieważ byli jeszcze uczniami - w przypadku uczniów i studentów do 26. roku życia nie są dostępne dane dotyczące ewentualnego wykonywania pracy na podstawie umów zleceń] lub samozatrudnionych, wynosił ",
-    if (length(unique(sty_sier)) %in% 1) {
+    if (length(unique(lip_sier)) %in% 1) {
       paste0(round(szk$S3_01[[1]]$ucz_prac * 100), "%.\n\n")
     } else {
       paste0(
         "od ",
-        min(sty_sier),
+        min(lip_sier),
         "% (w ",
-        paste(names(sty_sier[sty_sier == min(sty_sier)]), collapse = ", "),
+        paste(names(lip_sier[lip_sier == min(lip_sier)]), collapse = ", "),
         ") do ",
-        max(sty_sier),
+        max(lip_sier),
         "% (w ",
-        paste(names(sty_sier[sty_sier == max(sty_sier)]), collapse = ", "),
+        paste(names(lip_sier[lip_sier == max(lip_sier)]), collapse = ", "),
         ").\n\n",
         sep = ""
       )
@@ -573,12 +567,6 @@ if (szk$S3_12[[1]]$n >= progLiczebnosci) {
 
 ```{r, echo=FALSE, message=FALSE, results='asis', fig.align=wyrownanieTabWykr, warning=FALSE}
 szkoly_month = rbind(
-  as_tibble(szk$S3_01[[1]]),
-  as_tibble(szk$S3_02[[1]]),
-  as_tibble(szk$S3_03[[1]]),
-  as_tibble(szk$S3_04[[1]]),
-  as_tibble(szk$S3_05[[1]]),
-  as_tibble(szk$S3_06[[1]]),
   as_tibble(szk$S3_07[[1]]),
   as_tibble(szk$S3_08[[1]]),
   as_tibble(szk$S3_09[[1]]),
@@ -588,7 +576,7 @@ szkoly_month = rbind(
 
 if (min(szkoly_month$n) >= progLiczebnosci) {
   tab_szk = szkoly_month %>%
-    mutate(month = 1:12) %>% 
+    mutate(month = 7:12) %>% 
     select(-n) %>% 
     pivot_longer(ucz_prac:neet) %>% 
     mutate(across(name,
@@ -611,12 +599,11 @@ if (min(szkoly_month$n) >= progLiczebnosci) {
                             ": Status edukacyjno-zawodowy absolwentów Państwa szkoły w poszczególnych miesiącach ",
                             params$rok,
                             " roku - ogółem (%)"), 80)) +
-    scale_x_continuous(n.breaks = 12,
-                       # muszę dać to "0" = "NA", żeby mi się zaczynało od stycznia
-                       labels = c("0" = "NA", "1" = "sty", "2" = "lut", "3" = "mar", "4" = "kwi", "5" = "maj", "6" = "cze", "7" = "lip", "8" = "sie", "9" = "wrz", "10" = "paź", "11" = "lis", "12" = "gru"))
+    scale_x_continuous(n.breaks = 6,
+                       labels = c("7" = "lip", "8" = "sie", "9" = "wrz", "10" = "paź", "11" = "lis", "12" = "gru"))
   
   tabelka = szkoly_month %>%
-    mutate(month = 1:12) %>% 
+    mutate(month = 7:12) %>% 
     select(-n) %>% 
     mutate(across(ucz_prac:neet,
                   ~ round(. * 100))) %>%
@@ -638,7 +625,7 @@ if (min(szkoly_month$n) >= progLiczebnosci) {
     arrange(mies) %>% 
     kable("latex", booktabs = TRUE, escape = FALSE, longtable = TRUE,
           linesep = "",
-          align = "lcccccccccccc",
+          align = "lcccccc",
           col.names = NULL,
           digits = 0) %>% 
     kable_styling(position = wyrownanieTabWykr,
@@ -646,21 +633,16 @@ if (min(szkoly_month$n) >= progLiczebnosci) {
                   font_size = 10,
                   full_width = TRUE,
                   repeat_header_text = "(ciąg dalszy tabeli)") %>% 
-    add_header_above(c("", "sty" = 1, "lut" = 1, "mar" = 1, "kwi" = 1, "maj" = 1, "cze" = 1, "lip" = 1, "sie" = 1, "wrz" = 1, "paź" = 1, "lis" = 1, "gru" = 1),
-                     align = c("l", "c", "c", "c", "c", "c", "c", "c", "c", "c", "c", "c", "c")) %>% 
+    add_header_above(c("", "lip" = 1, "sie" = 1, "wrz" = 1, "paź" = 1, "lis" = 1, "gru" = 1),
+                     align = c("l", "c", "c", "c", "c", "c", "c")) %>% 
     column_spec(1, width = "3.9cm") %>%
-    column_spec(2, width = "0.7cm") %>%
-    column_spec(3, width = "0.7cm") %>%
-    column_spec(4, width = "0.7cm") %>%
-    column_spec(5, width = "0.7cm") %>%
-    column_spec(6, width = "0.7cm") %>%
-    column_spec(7, width = "0.7cm") %>% 
-    column_spec(8, width = "0.7cm") %>%
-    column_spec(9, width = "0.7cm") %>%
-    column_spec(10, width = "0.7cm") %>%
-    column_spec(11, width = "0.7cm") %>%
-    column_spec(12, width = "0.7cm") %>%
-    column_spec(13, width = "0.7cm")
+    column_spec(2, width = "0.8cm") %>%
+    column_spec(3, width = "0.8cm") %>%
+    column_spec(4, width = "0.8cm") %>%
+    column_spec(5, width = "0.8cm") %>%
+    column_spec(6, width = "0.8cm") %>%
+    column_spec(7, width = "0.8cm") %>% 
+    column_spec(8, width = "0.8cm")
   
   zwroc_wykres_tabela(wykres, tabelka)
 }
@@ -1001,27 +983,28 @@ if (szk$Z4_ucz[[1]]$n >= progLiczebnosci) {
     filter(!(name %in% c("srednia", "mediana"))) %>% 
     pivot_wider() %>% 
     pivot_longer(cols = p0:p100) %>%  
-    mutate(lab = paste0(round(value * 100), "%"))
+    mutate(lab = ifelse(round(value, 2) >= 0.06,
+                              paste0(round(value * 100), "%"),
+                              ""))
   
   tab_wyk$name = ordered(tab_wyk$name,
                          levels = c("p0", "czesc", "p100"),
-                         labels = c("brak\npracy", "praca przez\nczęść okresu", "praca przez\ncały okres"))
+                         labels = c("brak pracy", "praca przez część okresu", "praca przez cały okres"))
   
-  wykres = wyk_facet(tab_wyk,
-                     wrapper(paste0("Wykres ",
+  wykres = wykres_pion_skum(tab_wyk,
+                            wrapper(paste0("Wykres ",
                                     wyk_num(),
                                     ": Procentowy udział grup wyróżnionych ze względu na część przepracowanego okresu wśród absolwentów Państwa szkoły oraz absolwentów pozostałych branżowych szkół I stopnia z ",
                                     powiaty_dop,
                                     ", w okresie od września do grudnia ",
                                     params$rok,
                                     " roku - kontynuujący naukę"),
-                             width = 85),
-                     "name",
-                     "Przepracowany okres") +
-    geom_text(data = tab_wyk,
-              aes(x = name, y = value, label = lab, group = typ),
-              nudge_y = 0.03,
-              size = 2.5)
+                             width = 85)) +
+    scale_fill_manual(values = c("#fb8c59",
+                                 "#f8dd00",
+                                 "#90cf60")) +
+    ylab("Odsetek absolwentów") + 
+    guides(fill = guide_legend(nrow = 1, byrow = TRUE))
   
   levels(tab_wyk$typ) = linebreak(levels(tab_wyk$typ), align = "l")
   
@@ -1111,27 +1094,28 @@ if (szk$Z4_nie_ucz[[1]]$n >= progLiczebnosci) {
     filter(!(name %in% c("srednia", "mediana"))) %>% 
     pivot_wider() %>% 
     pivot_longer(cols = p0:p100) %>% 
-    mutate(lab = paste0(round(value * 100), "%"))
+    mutate(lab = ifelse(round(value, 2) >= 0.06,
+                              paste0(round(value * 100), "%"),
+                              ""))
   
   tab_wyk$name = ordered(tab_wyk$name,
                          levels = c("p0", "czesc", "p100"),
-                         labels = c("brak\npracy", "praca przez\nczęść okresu", "praca przez\ncały okres"))
+                         labels = c("brak pracy", "praca przez część okresu", "praca przez cały okres"))
   
-  wykres = wyk_facet(tab_wyk,
-                     wrapper(paste0("Wykres ",
+  wykres = wykres_pion_skum(tab_wyk,
+                            wrapper(paste0("Wykres ",
                                     wyk_num(),
                                     ": Procentowy udział grup wyróżnionych ze względu na część przepracowanego okresu wśród absolwentów Państwa szkoły oraz absolwentów pozostałych branżowych szkół I stopnia z ",
                                     powiaty_dop,
                                     ", w okresie od września do grudnia ",
                                     params$rok,
                                     " - niekontynuujący nauki"),
-                             width = 85),
-                     "name",
-                     "Przepracowany okres") +
-    geom_text(data = tab_wyk,
-              aes(x = name, y = value, label = lab, group = typ),
-              nudge_y = 0.03,
-              size = 2.5)
+                             width = 85)) +
+    scale_fill_manual(values = c("#fb8c59",
+                                 "#f8dd00",
+                                 "#90cf60")) +
+    ylab("Odsetek absolwentów") + 
+    guides(fill = guide_legend(nrow = 1, byrow = TRUE))
   
   levels(tab_wyk$typ) = linebreak(levels(tab_wyk$typ), align = "l")
   
@@ -1215,7 +1199,10 @@ if (szk$Z8_formy_ucz[[1]]$n >= progLiczebnosci) {
            width = 85)
   
   wykres = wykres_pion_skum(tab_wyk, wyk_tyt) +
-    scale_fill_manual(values = c("#90cf60", "#d8ef8a", "#f8dd00", "#fb8c59")) +
+    scale_fill_manual(values = c("#90cf60",
+                                 "#d8ef8a",
+                                 "#f8dd00",
+                                 "#fb8c59")) +
     ylab("Odsetek absolwentów")
   
   levels(tab_wyk$typ) = linebreak(levels(tab_wyk$typ), align = "l")
@@ -1423,8 +1410,8 @@ if (szk$Z9_mlod_ucz[[1]]$n >= progLiczebnosci) {
   
   tab_wyk$name = factor(tab_wyk$name, levels = c("Uczący się, niekontynuujący pracy u danego\npracodawcy na podstawie umowy o pracę", "Uczący się, kontynuujący pracę u danego\npracodawcy na podstawie umowy o pracę"))
   wykres = wykres_poziomy_statusy(tab_wyk, wyk_tyt) +
-    scale_fill_manual(values = c("#d62f26", # czerwony
-                                 "#fb8c59")) # pomarańczowy
+    scale_fill_manual(values = c("#d62f26",
+                                 "#fb8c59"))
   
   levels(tab_wyk$typ) = linebreak(levels(tab_wyk$typ), align = "c")
   
@@ -1561,9 +1548,9 @@ if (szk$Z9_mlod_nie_ucz[[1]]$n >= progLiczebnosci) {
   
   wykres = wykres_poziomy_statusy(tab_wyk, wyk_tyt) +
     scale_fill_manual(values = c(
-      "#d62f26", # czerwony
-      "#d8ef89", # jasnozielony
-      "#fb8c59" # pomarańczowy
+      "#d62f26",
+      "#d8ef89",
+      "#fb8c59"
     ))
     
   levels(tab_wyk$typ) = linebreak(levels(tab_wyk$typ), align = "c")
