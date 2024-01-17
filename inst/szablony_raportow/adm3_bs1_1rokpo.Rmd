@@ -593,14 +593,15 @@ if (min(szkoly_month$n) >= progLiczebnosci) {
                                            "Nauka i praca",
                                            "Tylko nauka")))
   
-  wykres = wave_chart(tab_szk,
-             wrapper(paste0("Wykres ",
-                            wyk_num(),
-                            ": Status edukacyjno-zawodowy absolwentów Państwa szkoły w poszczególnych miesiącach ",
-                            params$rok,
-                            " roku - ogółem (%)"), 80)) +
-    scale_x_continuous(n.breaks = 6,
-                       labels = c("7" = "lip", "8" = "sie", "9" = "wrz", "10" = "paź", "11" = "lis", "12" = "gru"))
+  tab_szk$month = factor(tab_szk$month, ordered = TRUE)
+  
+  wykres = wykres_pionowy_statusy(tab_szk,
+                                  wrapper(paste0("Wykres ",
+                                                 wyk_num(),
+                                                 ": Status edukacyjno-zawodowy absolwentów Państwa szkoły w poszczególnych miesiącach ",
+                                                 params$rok,
+                                                 " roku - ogółem (%)"), 80)) +
+    scale_x_discrete(labels = c("7" = "lip", "8" = "sie", "9" = "wrz", "10" = "paź", "11" = "lis", "12" = "gru"))
   
   tabelka = szkoly_month %>%
     mutate(month = 7:12) %>% 

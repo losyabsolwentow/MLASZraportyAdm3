@@ -41,6 +41,51 @@ wykres_poziomy_statusy = function(x, tytul) {
           axis.ticks.x = element_blank(),
           plot.title.position = "plot",
           plot.title = element_text(size = 11)) +
+    guides(fill = guide_legend(nrow = 4, byrow = TRUE, reverse = TRUE)) %>%
+    return()
+}
+#' @title Wykresy w raportach z 3. rundy monitoringu na danych administracyjnych
+#' @description Funkcja rysująca pionowy, skumulowany, wykres słupkowy na
+#' potrzeby raportu. Jako argument zawierający zbiór danych należy podać ramkę
+#' danych będącą wynikiem działania funkcji \code{tab_wykres_ad1()} lub
+#' inną, analogiczną.
+#' @param x ramka z danymi do przedstawienia na wykresie
+#' @param tytul tytuł wykresu w formie ciągu tekstowego lub wartość NULL dla
+#' braku tytułu
+#' @export
+#' @return wykres
+#' @importFrom tibble is_tibble
+#' @importFrom ggplot2 ggplot geom_bar scale_fill_brewer scale_y_continuous
+#' labs geom_text coord_flip theme guides ylab xlab scale_x_discrete
+#' @importFrom dplyr .data
+wykres_pionowy_statusy = function(x, tytul) {
+  stopifnot(is_tibble(x),
+            ifelse(is.null(tytul), FALSE, nchar(tytul) > 1))
+  
+  kolory_slupkow = c("#d62f26", "#f8dd00", "#d8ef8a", "#1a974f")
+  
+  ggplot(x, aes(x = .data$month,
+                y = .data$value,
+                fill = .data$name)) +
+    geom_bar(width = 0.75, stat = "identity", colour = "white") +
+    scale_fill_manual(values = kolory_slupkow,
+                      guide = guide_legend(reverse = TRUE)) +
+    scale_y_continuous(labels = scales::percent) +
+    scale_x_discrete(limits = rev) +
+    labs(fill = NULL,
+         title = tytul) +
+    geom_text(aes(label = .data$lab),
+              position = position_stack(vjust = 0.5), size = 3,
+              colour = "#000000") +
+    ylab(NULL) +
+    xlab(NULL) +
+    theme(legend.position = "bottom",
+          legend.justification = "left",
+          panel.background = element_rect(fill = "white"),
+          axis.ticks.y = element_blank(),
+          axis.ticks.x = element_blank(),
+          plot.title.position = "plot",
+          plot.title = element_text(size = 11)) +
     guides(fill = guide_legend(nrow = 6, byrow = TRUE, reverse = TRUE)) %>%
     return()
 }
