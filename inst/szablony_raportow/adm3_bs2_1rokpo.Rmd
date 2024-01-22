@@ -23,6 +23,7 @@ params:
   obiektWskaznikiKraj1: god1
   obiektWskaznikiKraj2: god2
   obiektSzkoloZawody: szkozaw
+  obiektWoj: woj
   progLiczebnosci: 10
   typDokumentu: pdf
   wyrownanieTabWykr: center
@@ -34,6 +35,7 @@ wskazniki:
   wskaznikiKraj1: god1
   wskaznikiKraj2: god2
   wskaznikiSzkozaw: szkozaw
+  wskaznikiWoj: woj
 ---
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
@@ -1749,7 +1751,7 @@ Więcej informacji o monitorowaniu karier absolwentów znajdą Państwo na stron
 
 `r ifelse(typDokumentu %in% "pdf", "\\newpage", "")`
 
-# 6. Aneks: wyniki dla absolwentów branżowych szkół II stopnia z całego kraju
+# 6. Aneks: wyniki dla absolwentów branżowych szkół II stopnia `r ifelse(woj$l_abs[[1]] < progLiczebnosci, paste0(""), paste0("z województwa i "))`z całego kraju
 
 ```{r, echo=FALSE, message=FALSE, error=FALSE, warning=FALSE, results='asis', fig.align=wyrownanieTabWykr}
 god1 = god1 %>% 
@@ -1758,36 +1760,72 @@ god1 = god1 %>%
 
 god2 = god2 %>% 
   filter(typ_szk %in% szk$typ_szk[[1]])
+
+woj = woj %>% 
+  filter(typ_szk %in% szk$typ_szk[[1]],
+         teryt_woj %in% szk$teryt_woj[[1]])
 ```
 
-W aneksie zaprezentowano tabelaryczne rozkłady wybranych wskaźników przedstawionych w raporcie, ale dla ogółu absolwentów, którzy w roku szkolnym `r rocznik` ukończyli branżowe szkoły II stopnia (BS II) w całym kraju.
+W aneksie zaprezentowano tabelaryczne rozkłady wybranych wskaźników przedstawionych w raporcie, ale dla ogółu absolwentów, którzy w roku szkolnym `r rocznik` ukończyli branżowe szkoły II stopnia (BS II) `r ifelse(woj$l_abs[[1]] < progLiczebnosci, paste0(""), paste0("w województwie, w którym znajduje się Państwa szkoła oraz "))`w całym kraju.
 
 1. Status edukacyjno-zawodowy w grudniu `r params$rok` roku
 
   a) ogółem
 
 ```{r, echo=FALSE, message=FALSE, error=FALSE, warning=FALSE, results='asis', fig.align=wyrownanieTabWykr}
-god2$S3_12[[1]] %>%
-  as_tibble() %>% 
-  select(n, tylko_ucz, ucz_prac, tylko_prac, neet) %>% 
-  mutate(across(n, ~linebreak(paste0("Absolwenci BS II\nw całym  kraju"), align = "l"))) %>%
-  mutate(across(tylko_ucz:neet,
-                ~paste0(round(. * 100), "\\%"))) %>%
-  kable(format = "latex", booktabs = TRUE, escape = FALSE, longtable = TRUE,
-        linesep = "",
-        align = "lcccc",
-        col.names = NULL,
-        digits = 0) %>% 
-  kable_styling(position = wyrownanieTabWykr,
-                latex_options = c("hold_position", "repeat_header"),
-                # font_size = 10,
-                full_width = FALSE,
-                repeat_header_text = "(ciąg dalszy tabeli)") %>% 
-  add_header_above(c(" ", "1. Tylko nauka" = 1, "2. Nauka i praca" = 1, "3. Tylko praca" = 1, "4. Brak nauki i\nbrak pracy" = 1),
-                   align = c("l", "c", "c", "c", "c"))
+if (woj$l_abs[[1]] < progLiczebnosci) {
+  god2$S3_12[[1]] %>%
+    as_tibble() %>% 
+    select(n, tylko_ucz, ucz_prac, tylko_prac, neet) %>% 
+    mutate(across(n, ~linebreak(paste0("Absolwenci BS II\nw całym  kraju"), align = "l"))) %>%
+    mutate(across(tylko_ucz:neet,
+                  ~paste0(round(. * 100), "\\%"))) %>%
+    kable(format = "latex", booktabs = TRUE, escape = FALSE, longtable = TRUE,
+          linesep = "",
+          align = "lcccc",
+          col.names = NULL,
+          digits = 0) %>% 
+    kable_styling(position = wyrownanieTabWykr,
+                  latex_options = c("hold_position", "repeat_header"),
+                  # font_size = 10,
+                  full_width = FALSE,
+                  repeat_header_text = "(ciąg dalszy tabeli)") %>% 
+    add_header_above(c(" ", "1. Tylko nauka" = 1, "2. Nauka i praca" = 1, "3. Tylko praca" = 1, "4. Brak nauki i\nbrak pracy" = 1),
+                     align = c("l", "c", "c", "c", "c"))
+} else {
+  tabela_woj = woj$S3_12[[1]] %>% 
+    as_tibble() %>% 
+    select(n, tylko_ucz, ucz_prac, tylko_prac, neet) %>% 
+    mutate(across(n, ~linebreak(paste0("Absolwenci BS II\nw województwie\n",
+                                       woj$odmiany$nazwa_dop[[1]]), align = "l"))) %>%
+    mutate(across(tylko_ucz:neet,
+                  ~paste0(round(. * 100), "\\%")))
+  
+  tabela_kraj = god2$S3_12[[1]] %>%
+    as_tibble() %>% 
+    select(n, tylko_ucz, ucz_prac, tylko_prac, neet) %>% 
+    mutate(across(n, ~linebreak(paste0("Absolwenci BS II\nw całym  kraju"), align = "l"))) %>%
+    mutate(across(tylko_ucz:neet,
+                  ~paste0(round(. * 100), "\\%")))
+  
+  
+  rbind(tabela_woj, tabela_kraj) %>% 
+    kable(format = "latex", booktabs = TRUE, escape = FALSE, longtable = TRUE,
+          linesep = "",
+          align = "lcccc",
+          col.names = NULL,
+          digits = 0) %>% 
+    kable_styling(position = wyrownanieTabWykr,
+                  latex_options = c("hold_position", "repeat_header"),
+                  # font_size = 10,
+                  full_width = FALSE,
+                  repeat_header_text = "(ciąg dalszy tabeli)") %>% 
+    add_header_above(c(" ", "1. Tylko nauka" = 1, "2. Nauka i praca" = 1, "3. Tylko praca" = 1, "4. Brak nauki i\nbrak pracy" = 1),
+                     align = c("l", "c", "c", "c", "c"))
+}
 ```
 
-  b) w poszczególnych zawodach
+  b) w poszczególnych zawodach `r ifelse(woj$l_abs[[1]] < progLiczebnosci, paste0(""), paste0(" - tylko na poziomie całego kraju"))`
     
 ```{r, echo=FALSE, message=FALSE, error=FALSE, warning=FALSE, results='asis', fig.align=wyrownanieTabWykr}
 tabela = tibble()
@@ -1840,99 +1878,203 @@ if (nrow(tabela) > 0) {
 2. Sposoby kontynuowania nauki w grudniu `r params$rok` roku
 
 ```{r, echo=FALSE, message=FALSE, error=FALSE, warning=FALSE, results='asis', fig.align=wyrownanieTabWykr}
-tabelka_bez_brak = god2$E2_nauka_kontyn[[1]][-1] %>% 
-  as_tibble() %>% 
-  pivot_longer(everything()) %>% 
-  filter(!name %in% "brak") %>% 
-  arrange(desc(value))
-
-tabelka = rbind(
-  tabelka_bez_brak,
-  god2$E2_nauka_kontyn[[1]][-1] %>% 
+if (woj$l_abs[[1]] < progLiczebnosci) {
+  tabelka_bez_brak = god2$E2_nauka_kontyn[[1]][-1] %>% 
     as_tibble() %>% 
     pivot_longer(everything()) %>% 
-    filter(name %in% "brak"))
-
-tabelka$name = factor(tabelka$name,
-                      levels = c("studia",
-                                 "spolic",
-                                 "kkz",
-                                 "lodd",
-                                 "bs2",
-                                 "kuz",
-                                 "brak"),
-                      labels = c("Studia",
-                                 "Szkoła policealna",
-                                 "Kwalifikacyjny Kurs Zawodowy (KKZ)",
-                                 "Liceum dla dorosłych",
-                                 "Branżowa szkoła II stopnia",
-                                 "Kurs Umiejętności Zawodowych (KUZ)",
-                                 "Nie kontynuują kształcenia"))
-
-tabelka %>% 
-  mutate(across(value,
-                ~paste0(round(. * 100), "\\%"))) %>%
-  kable(format = "latex", booktabs = TRUE, escape = FALSE, longtable = TRUE,
-        linesep = "",
-        align = "lc",
-        col.names = NULL,
-        digits = 0) %>% 
-  kable_styling(position = wyrownanieTabWykr,
-                latex_options = c("hold_position", "repeat_header"),
-                # font_size = 10,
-                full_width = FALSE,
-                repeat_header_text = "(ciąg dalszy tabeli)") %>% 
-  add_header_above(c("Sposób kontynuowania kształcenia", "Udział kontynuujących kształcenie wśród\nabsolwentów BS II z całego kraju" = 1),
-                   align = c("l", "c"))
+    filter(!name %in% "brak") %>% 
+    arrange(desc(value))
+  
+  tabelka = rbind(
+    tabelka_bez_brak,
+    god2$E2_nauka_kontyn[[1]][-1] %>% 
+      as_tibble() %>% 
+      pivot_longer(everything()) %>% 
+      filter(name %in% "brak"))
+  
+  tabelka$name = factor(tabelka$name,
+                        levels = c("studia",
+                                   "spolic",
+                                   "kkz",
+                                   "lodd",
+                                   "bs2",
+                                   "kuz",
+                                   "brak"),
+                        labels = c("Studia",
+                                   "Szkoła policealna",
+                                   "Kwalifikacyjny Kurs Zawodowy (KKZ)",
+                                   "Liceum dla dorosłych",
+                                   "Branżowa szkoła II stopnia",
+                                   "Kurs Umiejętności Zawodowych (KUZ)",
+                                   "Nie kontynuują kształcenia"))
+  
+  tabelka %>% 
+    mutate(across(value,
+                  ~paste0(round(. * 100), "\\%"))) %>%
+    kable(format = "latex", booktabs = TRUE, escape = FALSE, longtable = TRUE,
+          linesep = "",
+          align = "lc",
+          col.names = NULL,
+          digits = 0) %>% 
+    kable_styling(position = wyrownanieTabWykr,
+                  latex_options = c("hold_position", "repeat_header"),
+                  # font_size = 10,
+                  full_width = FALSE,
+                  repeat_header_text = "(ciąg dalszy tabeli)") %>% 
+    add_header_above(c("Sposób kontynuowania kształcenia", "Udział kontynuujących kształcenie wśród\nabsolwentów BS II z całego kraju" = 1),
+                     align = c("l", "c"))
+  
+  cat("\n\nOdsetki mogą sumować się do więcej niż 100% ze względu na możliwość kontynuowania edukacji w więcej niż jednej formie.\n\n")
+} else {
+  cat("    a) województwo ",
+      woj$odmiany[[1]]$nazwa,
+      "\n\n",
+      sep = "")
+  
+  tabelka_bez_brak = woj$E2_nauka_kontyn[[1]][-1] %>% 
+    as_tibble() %>% 
+    pivot_longer(everything()) %>% 
+    filter(!name %in% "brak") %>% 
+    arrange(desc(value))
+  
+  tabelka = rbind(
+    tabelka_bez_brak,
+    woj$E2_nauka_kontyn[[1]][-1] %>% 
+      as_tibble() %>% 
+      pivot_longer(everything()) %>% 
+      filter(name %in% "brak"))
+  
+  tabelka$name = factor(tabelka$name,
+                        levels = c("studia",
+                                   "spolic",
+                                   "kkz",
+                                   "lodd",
+                                   "bs2",
+                                   "kuz",
+                                   "brak"),
+                        labels = c("Studia",
+                                   "Szkoła policealna",
+                                   "Kwalifikacyjny Kurs Zawodowy (KKZ)",
+                                   "Liceum dla dorosłych",
+                                   "Branżowa szkoła II stopnia",
+                                   "Kurs Umiejętności Zawodowych (KUZ)",
+                                   "Nie kontynuują kształcenia"))
+  
+  nagl = paste0("Udział kontynuujących kształcenie wśród\nabsolwentów BS II z województwa\n", woj$odmiany[[1]]$nazwa_dop)
+  
+  tabelka %>% 
+    mutate(across(value,
+                  ~paste0(round(. * 100), "\\%"))) %>%
+    kable(format = "latex", booktabs = TRUE, escape = FALSE, longtable = TRUE,
+          linesep = "",
+          align = "lc",
+          col.names = NULL,
+          digits = 0) %>% 
+    kable_styling(position = wyrownanieTabWykr,
+                  latex_options = c("hold_position", "repeat_header"),
+                  # font_size = 10,
+                  full_width = FALSE,
+                  repeat_header_text = "(ciąg dalszy tabeli)") %>% 
+    add_header_above(c("Sposób kontynuowania kształcenia", nagl),
+                     align = c("l", "c"))
+  
+  cat("\n\nOdsetki mogą sumować się do więcej niż 100% ze względu na możliwość kontynuowania edukacji w więcej niż jednej formie.\n\n",
+      "    b) cały kraj\n\n",
+      sep = "")
+  
+  tabelka_bez_brak = god2$E2_nauka_kontyn[[1]][-1] %>% 
+    as_tibble() %>% 
+    pivot_longer(everything()) %>% 
+    filter(!name %in% "brak") %>% 
+    arrange(desc(value))
+  
+  tabelka = rbind(
+    tabelka_bez_brak,
+    god2$E2_nauka_kontyn[[1]][-1] %>% 
+      as_tibble() %>% 
+      pivot_longer(everything()) %>% 
+      filter(name %in% "brak"))
+  
+  tabelka$name = factor(tabelka$name,
+                        levels = c("studia",
+                                   "spolic",
+                                   "kkz",
+                                   "lodd",
+                                   "bs2",
+                                   "kuz",
+                                   "brak"),
+                        labels = c("Studia",
+                                   "Szkoła policealna",
+                                   "Kwalifikacyjny Kurs Zawodowy (KKZ)",
+                                   "Liceum dla dorosłych",
+                                   "Branżowa szkoła II stopnia",
+                                   "Kurs Umiejętności Zawodowych (KUZ)",
+                                   "Nie kontynuują kształcenia"))
+  
+  tabelka %>% 
+    mutate(across(value,
+                  ~paste0(round(. * 100), "\\%"))) %>%
+    kable(format = "latex", booktabs = TRUE, escape = FALSE, longtable = TRUE,
+          linesep = "",
+          align = "lc",
+          col.names = NULL,
+          digits = 0) %>% 
+    kable_styling(position = wyrownanieTabWykr,
+                  latex_options = c("hold_position", "repeat_header"),
+                  # font_size = 10,
+                  full_width = FALSE,
+                  repeat_header_text = "(ciąg dalszy tabeli)") %>% 
+    add_header_above(c("Sposób kontynuowania kształcenia", "Udział kontynuujących kształcenie wśród\nabsolwentów BS II z całego kraju" = 1),
+                     align = c("l", "c"))
+  
+  cat("\n\nOdsetki mogą sumować się do więcej niż 100% ze względu na możliwość kontynuowania edukacji w więcej niż jednej formie.\n\n")
+}
 ```
-
-Odsetki mogą sumować się do więcej niż 100% ze względu na możliwość kontynuowania edukacji w więcej niż jednej formie.
 
 3. Praca po ukończeniu branżowej szkoły II stopnia w okresie od września do grudnia `r params$rok` roku
 
-Procentowy udział grup wyróżnionych ze względu na część przepracowanego okresu wśród absolwentów branżowych szkół II stopnia z całego kraju.
-
-  a) Część przepracowanego okresu
-
 ```{r, echo=FALSE, message=FALSE, error=FALSE, warning=FALSE, results='asis', fig.align=wyrownanieTabWykr}
-ucz = god2$Z4_ucz[[1]] %>% 
-  as_tibble() %>% 
-  select(-c(n, srednia, med)) %>% 
-  pivot_longer(everything()) %>% 
-  rename(ucz = value)
-
-ucz$name = c("Brak pracy", "Praca przez\nczęść okresu", "Praca przez\ncały okres")
-
-n_ucz = god2$Z4_nie_ucz[[1]] %>% 
-  as_tibble() %>% 
-  select(-c(n, srednia, med)) %>% 
-  pivot_longer(everything()) %>% 
-  rename(nie_ucz = value)
-
-cbind(ucz, n_ucz[,2]) %>% 
-  mutate(across(2:3,
-                ~paste0(round(. * 100), "\\%"))) %>%
-  kable("latex", booktabs = TRUE, escape = FALSE, longtable = TRUE,
-        linesep = "",
-        align = "lcc",
-        col.names = NULL,
-        digits = 0) %>%
-  kable_styling(position = wyrownanieTabWykr,
-                latex_options = c("hold_position", "repeat_header"),
-                # font_size = 9,
-                full_width = FALSE,
-                repeat_header_text = "(ciąg dalszy tabeli)") %>%
-  add_header_above(c(" ", "Absolwenci BS II z całego\nkraju kontynuujący naukę" = 1, "Absolwenci BS II z całego\nkraju niekontynuujący nauki" = 1),
-                   align = c("l", "c", "c"))
-
-```
-
-  b) Formy wykonywania pracy w grudniu `r params$rok` roku
-
-Procentowy udział grup wyróżnionych ze względu na formę wykonywania pracy wśród pracujących absolwentów branżowych szkół II stopnia z całego kraju.
-
-```{r, echo=FALSE, message=FALSE, error=FALSE, warning=FALSE, results='asis', fig.align=wyrownanieTabWykr}
-ucz = god2$Z8_formy_ucz[[1]] %>% 
+if (woj$l_abs[[1]] < progLiczebnosci) {
+  cat("Procentowy udział grup wyróżnionych ze względu na część przepracowanego okresu wśród absolwentów branżowych szkół II stopnia z całego kraju.\n\n",
+      "    a) Część przepracowanego okresu\n\n",
+      sep = "")
+  
+  ucz = god2$Z4_ucz[[1]] %>% 
+    as_tibble() %>% 
+    select(-c(n, srednia, med)) %>% 
+    pivot_longer(everything()) %>% 
+    rename(ucz = value)
+  
+  ucz$name = c("Brak pracy", "Praca przez\nczęść okresu", "Praca przez\ncały okres")
+  
+  n_ucz = god2$Z4_nie_ucz[[1]] %>% 
+    as_tibble() %>% 
+    select(-c(n, srednia, med)) %>% 
+    pivot_longer(everything()) %>% 
+    rename(nie_ucz = value)
+  
+  cbind(ucz, n_ucz[,2]) %>% 
+    mutate(across(2:3,
+                  ~paste0(round(. * 100), "\\%"))) %>%
+    kable("latex", booktabs = TRUE, escape = FALSE, longtable = TRUE,
+          linesep = "",
+          align = "lcc",
+          col.names = NULL,
+          digits = 0) %>%
+    kable_styling(position = wyrownanieTabWykr,
+                  latex_options = c("hold_position", "repeat_header"),
+                  # font_size = 9,
+                  full_width = FALSE,
+                  repeat_header_text = "(ciąg dalszy tabeli)") %>%
+    add_header_above(c(" ", "Absolwenci BS II z całego\nkraju kontynuujący naukę" = 1, "Absolwenci BS II z całego\nkraju niekontynuujący nauki" = 1),
+                     align = c("l", "c", "c"))
+  
+  cat("    b) Formy wykonywania pracy w grudniu ",
+      params$rok,
+      " roku\n\n",
+      "Procentowy udział grup wyróżnionych ze względu na formę wykonywania pracy wśród pracujących absolwentów branżowych szkół II stopnia z całego kraju.\n\n")
+  
+  ucz = god2$Z8_formy_ucz[[1]] %>% 
   as_tibble() %>% 
   select(-n) %>% 
   pivot_longer(everything()) %>% 
@@ -1961,29 +2103,218 @@ cbind(ucz, n_ucz[,2]) %>%
                   repeat_header_text = "(ciąg dalszy tabeli)") %>%
     add_header_above(c(" ", "Absolwenci BS II z całego\nkraju kontynuujący naukę" = 1, "Absolwenci BS II z całego\nkraju niekontynuujący nauki" = 1),
                    align = c("l", "c", "c"))
+} else {
+  cat("    a) województwo ",
+      woj$odmiany[[1]]$nazwa,
+      "\n\n* Część przepracowanego okresu - procentowy udział grup wyróżnionych ze względu na część przepracowanego okresu wśród absolwentów branżowych szkół II stopnia z województwa ",
+      woj$odmiany[[1]]$nazwa_dop,
+      sep = "")
+  
+  ucz = woj$Z4_ucz[[1]] %>% 
+    as_tibble() %>% 
+    select(-c(n, srednia, med)) %>% 
+    pivot_longer(everything()) %>% 
+    rename(ucz = value)
+  
+  ucz$name = c("Brak pracy", "Praca przez\nczęść okresu", "Praca przez\ncały okres")
+  
+  n_ucz = woj$Z4_nie_ucz[[1]] %>% 
+    as_tibble() %>% 
+    select(-c(n, srednia, med)) %>% 
+    pivot_longer(everything()) %>% 
+    rename(nie_ucz = value)
+  
+  cbind(ucz, n_ucz[,2]) %>% 
+    mutate(across(2:3,
+                  ~paste0(round(. * 100), "\\%"))) %>%
+    kable("latex", booktabs = TRUE, escape = FALSE, longtable = TRUE,
+          linesep = "",
+          align = "lcc",
+          col.names = NULL,
+          digits = 0) %>%
+    kable_styling(position = wyrownanieTabWykr,
+                  latex_options = c("hold_position", "repeat_header"),
+                  # font_size = 9,
+                  full_width = FALSE,
+                  repeat_header_text = "(ciąg dalszy tabeli)") %>%
+    add_header_above(c(" ", "Absolwenci BS II\nkontynuujący naukę" = 1, "Absolwenci BS II\nniekontynuujący nauki" = 1),
+                     align = c("l", "c", "c"))
+  
+  cat("\n\n* Formy wykonywania pracy w grudniu ",
+      params$rok,
+      " roku - procentowy udział grup wyróżnionych ze względu na formę wykonywania pracy wśród pracujących absolwentów branżowych szkół II stopnia z województwa ",
+      woj$odmiany[[1]]$nazwa_dop,
+      sep = "")
+  
+  ucz = woj$Z8_formy_ucz[[1]] %>% 
+    as_tibble() %>% 
+    select(-n) %>% 
+    pivot_longer(everything()) %>% 
+    rename(ucz = value)
+  
+  ucz$name = c("Zatrudnieni tylko na UOP", "Tylko samozatrudnieni", "Tylko inna forma", "Więcej niż jedna forma")
+  
+  n_ucz = god2$Z8_formy_nie_ucz[[1]] %>% 
+    as_tibble() %>% 
+    select(-c(n)) %>% 
+    pivot_longer(everything()) %>% 
+    rename(nie_ucz = value)
+  
+  cbind(ucz, n_ucz[,2]) %>% 
+    mutate(across(2:3,
+                  ~paste0(round(. * 100), "\\%"))) %>%
+    kable("latex", booktabs = TRUE, escape = FALSE, longtable = TRUE,
+          linesep = "",
+          align = "lcc",
+          col.names = NULL,
+          digits = 0) %>%
+    kable_styling(position = wyrownanieTabWykr,
+                  latex_options = c("hold_position", "repeat_header"),
+                  # font_size = 10,
+                  full_width = FALSE,
+                  repeat_header_text = "(ciąg dalszy tabeli)") %>%
+    add_header_above(c(" ", "Absolwenci BS II\nkontynuujący naukę" = 1, "Absolwenci BS II\nniekontynuujący nauki" = 1),
+                     align = c("l", "c", "c"))
+  
+  cat("\n\n    b) cały kraj\n\n* Część przepracowanego okresu - procentowy udział grup wyróżnionych ze względu na część przepracowanego okresu wśród absolwentów branżowych szkół II stopnia z całego kraju.")
+  
+  ucz = god2$Z4_ucz[[1]] %>% 
+    as_tibble() %>% 
+    select(-c(n, srednia, med)) %>% 
+    pivot_longer(everything()) %>% 
+    rename(ucz = value)
+  
+  ucz$name = c("Brak pracy", "Praca przez\nczęść okresu", "Praca przez\ncały okres")
+  
+  n_ucz = god2$Z4_nie_ucz[[1]] %>% 
+    as_tibble() %>% 
+    select(-c(n, srednia, med)) %>% 
+    pivot_longer(everything()) %>% 
+    rename(nie_ucz = value)
+  
+  cbind(ucz, n_ucz[,2]) %>% 
+    mutate(across(2:3,
+                  ~paste0(round(. * 100), "\\%"))) %>%
+    kable("latex", booktabs = TRUE, escape = FALSE, longtable = TRUE,
+          linesep = "",
+          align = "lcc",
+          col.names = NULL,
+          digits = 0) %>%
+    kable_styling(position = wyrownanieTabWykr,
+                  latex_options = c("hold_position", "repeat_header"),
+                  # font_size = 9,
+                  full_width = FALSE,
+                  repeat_header_text = "(ciąg dalszy tabeli)") %>%
+    add_header_above(c(" ", "Absolwenci BS II z całego\nkraju kontynuujący naukę" = 1, "Absolwenci BS II z całego\nkraju niekontynuujący nauki" = 1),
+                     align = c("l", "c", "c"))
+  
+  cat("\n\n* Formy wykonywania pracy w grudniu ",
+      params$rok,
+      " roku - procentowy udział grup wyróżnionych ze względu na formę wykonywania pracy wśród pracujących absolwentów branżowych szkół I stopnia z całego kraju.",
+      sep = "")
+  
+  ucz = god2$Z8_formy_ucz[[1]] %>% 
+    as_tibble() %>% 
+    select(-n) %>% 
+    pivot_longer(everything()) %>% 
+    rename(ucz = value)
+  
+  ucz$name = c("Zatrudnieni tylko na UOP", "Tylko samozatrudnieni", "Tylko inna forma", "Więcej niż jedna forma")
+  
+  n_ucz = god2$Z8_formy_nie_ucz[[1]] %>% 
+    as_tibble() %>% 
+    select(-c(n)) %>% 
+    pivot_longer(everything()) %>% 
+    rename(nie_ucz = value)
+  
+  cbind(ucz, n_ucz[,2]) %>% 
+    mutate(across(2:3,
+                  ~paste0(round(. * 100), "\\%"))) %>%
+    kable("latex", booktabs = TRUE, escape = FALSE, longtable = TRUE,
+          linesep = "",
+          align = "lcc",
+          col.names = NULL,
+          digits = 0) %>%
+    kable_styling(position = wyrownanieTabWykr,
+                  latex_options = c("hold_position", "repeat_header"),
+                  # font_size = 10,
+                  full_width = FALSE,
+                  repeat_header_text = "(ciąg dalszy tabeli)") %>%
+    add_header_above(c(" ", "Absolwenci BS II z całego\nkraju kontynuujący naukę" = 1, "Absolwenci BS II z całego\nkraju niekontynuujący nauki" = 1),
+                     align = c("l", "c", "c"))
+}
 ```
 
 4. Bezrobocie rejestrowane od września do grudnia `r params$rok` roku
 
-Procentowy udział grup wyróżnionych ze względu na część okresu, w ciągu którego byli zarejestrowani jako bezrobotni, wśród absolwentów branżowych szkół II stopnia z całego kraju.
-
 ```{r, echo=FALSE, message=FALSE, error=FALSE, warning=FALSE, results='asis', fig.align=wyrownanieTabWykr}
-god2$B2_bezrob[[1]]$l_mies_bezrob[1] = "0 (brak bezrobocia)"
-god2$B2_bezrob[[1]] %>% 
-  as_tibble() %>% 
-  select(l_mies_bezrob, value) %>% 
-  mutate(across(value,
-                ~paste0(round(. * 100), "\\%"))) %>% 
-  kable("latex", booktabs = TRUE, escape = FALSE, longtable = TRUE,
-        linesep = "",
-        align = "lc",
-        col.names = NULL,
-        digits = 0) %>%
-  kable_styling(position = wyrownanieTabWykr,
-                latex_options = c("hold_position", "repeat_header"),
-                # font_size = 10,
-                full_width = FALSE,
-                repeat_header_text = "(ciąg dalszy tabeli)") %>%
-  add_header_above(c("Liczba miesięcy bezrobocia", "Odsetek"),
-                   align = c("l", "c"))
+if (woj$l_abs[[1]] < progLiczebnosci) {
+  cat("Procentowy udział grup wyróżnionych ze względu na część okresu, w ciągu którego byli zarejestrowani jako bezrobotni, wśród absolwentów branżowych szkół II stopnia z całego kraju.")
+  
+  god2$B2_bezrob[[1]]$l_mies_bezrob[1] = "0 (brak bezrobocia)"
+  god2$B2_bezrob[[1]] %>% 
+    as_tibble() %>% 
+    select(l_mies_bezrob, value) %>% 
+    mutate(across(value,
+                  ~paste0(round(. * 100), "\\%"))) %>% 
+    kable("latex", booktabs = TRUE, escape = FALSE, longtable = TRUE,
+          linesep = "",
+          align = "lc",
+          col.names = NULL,
+          digits = 0) %>%
+    kable_styling(position = wyrownanieTabWykr,
+                  latex_options = c("hold_position", "repeat_header"),
+                  # font_size = 10,
+                  full_width = FALSE,
+                  repeat_header_text = "(ciąg dalszy tabeli)") %>%
+    add_header_above(c("Liczba miesięcy bezrobocia", "Odsetek"),
+                     align = c("l", "c"))
+} else {
+  cat("    a) województwo ",
+      woj$odmiany[[1]]$nazwa,
+      "\n\nProcentowy udział grup wyróżnionych ze względu na część okresu, w ciągu którego byli zarejestrowani jako bezrobotni, wśród absolwentów branżowych szkół II stopnia z województwa ",
+      woj$odmiany[[1]]$nazwa_dop,
+      ".\n\n",
+      sep = "")
+  
+  woj$B2_bezrob[[1]]$l_mies_bezrob[1] = "0 (brak bezrobocia)"
+  woj$B2_bezrob[[1]] %>% 
+    as_tibble() %>% 
+    select(l_mies_bezrob, value) %>% 
+    mutate(across(value,
+                  ~paste0(round(. * 100), "\\%"))) %>% 
+    kable("latex", booktabs = TRUE, escape = FALSE, longtable = TRUE,
+          linesep = "",
+          align = "lc",
+          col.names = NULL,
+          digits = 0) %>%
+    kable_styling(position = wyrownanieTabWykr,
+                  latex_options = c("hold_position", "repeat_header"),
+                  # font_size = 10,
+                  full_width = FALSE,
+                  repeat_header_text = "(ciąg dalszy tabeli)") %>%
+    add_header_above(c("Liczba miesięcy bezrobocia", "Odsetek"),
+                     align = c("l", "c"))
+  
+  cat("    b) cały kraj\n\nProcentowy udział grup wyróżnionych ze względu na część okresu, w ciągu którego byli zarejestrowani jako bezrobotni, wśród absolwentów branżowych szkół II stopnia z całego kraju.")
+  
+  god2$B2_bezrob[[1]]$l_mies_bezrob[1] = "0 (brak bezrobocia)"
+  god2$B2_bezrob[[1]] %>% 
+    as_tibble() %>% 
+    select(l_mies_bezrob, value) %>% 
+    mutate(across(value,
+                  ~paste0(round(. * 100), "\\%"))) %>% 
+    kable("latex", booktabs = TRUE, escape = FALSE, longtable = TRUE,
+          linesep = "",
+          align = "lc",
+          col.names = NULL,
+          digits = 0) %>%
+    kable_styling(position = wyrownanieTabWykr,
+                  latex_options = c("hold_position", "repeat_header"),
+                  # font_size = 10,
+                  full_width = FALSE,
+                  repeat_header_text = "(ciąg dalszy tabeli)") %>%
+    add_header_above(c("Liczba miesięcy bezrobocia", "Odsetek"),
+                     align = c("l", "c"))
+}
 ```

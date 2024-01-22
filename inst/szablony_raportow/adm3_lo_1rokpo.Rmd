@@ -22,6 +22,7 @@ params:
   obiektWskaznikiPorownanie: god
   obiektWskaznikiKraj1: god1
   obiektWskaznikiKraj2: god2
+  obiektWoj: woj
   progLiczebnosci: 10
   typDokumentu: pdf
   wyrownanieTabWykr: center
@@ -32,6 +33,7 @@ wskazniki:
   wskaznikiGrPor: god
   wskaznikiKraj1: god1
   wskaznikiKraj2: god2
+  wskaznikiWoj: woj
 ---
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
@@ -1540,7 +1542,7 @@ Więcej informacji o monitorowaniu karier absolwentów znajdą Państwo na stron
 
 `r ifelse(typDokumentu %in% "pdf", "\\newpage", "")`
 
-# 6. Aneks: wyniki dla absolwentów liceów ogólnokształcących dla młodzieży z całego kraju
+# 6. Aneks: wyniki dla absolwentów liceów ogólnokształcących dla młodzieży z województwa i z całego kraju
 
 ```{r, echo=FALSE, message=FALSE, error=FALSE, warning=FALSE, results='asis', fig.align=wyrownanieTabWykr}
 god1 = god1 %>% 
@@ -1549,19 +1551,34 @@ god1 = god1 %>%
 
 god2 = god2 %>% 
   filter(typ_szk %in% szk$typ_szk[[1]])
+
+woj = woj %>% 
+  filter(teryt_woj %in% szk$teryt_woj[[1]],
+         typ_szk %in% szk$typ_szk[[1]])
 ```
 
-W aneksie zaprezentowano tabelaryczne rozkłady wybranych wskaźników przedstawionych w raporcie, ale dla ogółu absolwentów, którzy w roku szkolnym `r rocznik` ukończyli licea ogólnokształcące dla młodzieży w całym kraju.
+W aneksie zaprezentowano tabelaryczne rozkłady wybranych wskaźników przedstawionych w raporcie, ale dla ogółu absolwentów, którzy w roku szkolnym `r rocznik` ukończyli licea ogólnokształcące dla młodzieży w województwie, w którym znajduje się Państwa szkoła oraz w całym kraju.
 
 1. Status edukacyjno-zawodowy w grudniu `r params$rok` roku - ogółem
 
 ```{r, echo=FALSE, message=FALSE, error=FALSE, warning=FALSE, results='asis', fig.align=wyrownanieTabWykr}
-god2$S3_12[[1]] %>%
+tabela_woj = woj$S3_12[[1]] %>% 
   as_tibble() %>% 
   select(n, tylko_ucz, ucz_prac, tylko_prac, neet) %>% 
-  mutate(across(n, ~linebreak(paste0("Absolwenci liceów ogólnokształcących\ndla młodzieży w całym kraju"), align = "l"))) %>%
+  mutate(across(n, ~linebreak(paste0("Absolwenci liceów\nogólnokształcących dla młodzieży\nw województwie ",
+                                     woj$odmiany$nazwa_dop[[1]]), align = "l"))) %>%
   mutate(across(tylko_ucz:neet,
-                ~paste0(round(. * 100), "\\%"))) %>%
+                ~paste0(round(. * 100), "\\%")))
+
+tabela_kraj = god2$S3_12[[1]] %>%
+  as_tibble() %>% 
+  select(n, tylko_ucz, ucz_prac, tylko_prac, neet) %>% 
+  mutate(across(n, ~linebreak(paste0("Absolwenci liceów\nogólnokształcących dla młodzieży\nw całym kraju"), align = "l"))) %>%
+  mutate(across(tylko_ucz:neet,
+                ~paste0(round(. * 100), "\\%")))
+  
+  
+rbind(tabela_woj, tabela_kraj) %>% 
   kable(format = "latex", booktabs = TRUE, escape = FALSE, longtable = TRUE,
         linesep = "",
         align = "lcccc",
@@ -1577,6 +1594,61 @@ god2$S3_12[[1]] %>%
 ```
 
 2. Sposoby kontynuowania nauki w grudniu `r params$rok` roku
+
+    a) województwo `r woj$odmiany[[1]]$nazwa`
+
+```{r, echo=FALSE, message=FALSE, error=FALSE, warning=FALSE, results='asis', fig.align=wyrownanieTabWykr}
+tabelka_bez_brak = woj$E2_nauka_kontyn[[1]][-1] %>% 
+  as_tibble() %>% 
+  pivot_longer(everything()) %>% 
+  filter(!name %in% "brak") %>% 
+  arrange(desc(value))
+
+tabelka = rbind(
+  tabelka_bez_brak,
+  woj$E2_nauka_kontyn[[1]][-1] %>% 
+    as_tibble() %>% 
+    pivot_longer(everything()) %>% 
+    filter(name %in% "brak"))
+
+tabelka$name = factor(tabelka$name,
+                      levels = c("studia",
+                                 "spolic",
+                                 "kkz",
+                                 "lodd",
+                                 "bs2",
+                                 "kuz",
+                                 "brak"),
+                      labels = c("Studia",
+                                 "Szkoła policealna",
+                                 "Kwalifikacyjny Kurs Zawodowy (KKZ)",
+                                 "Liceum dla dorosłych",
+                                 "Branżowa szkoła II stopnia",
+                                 "Kurs Umiejętności Zawodowych (KUZ)",
+                                 "Nie kontynuują kształcenia"))
+
+nagl = paste0("Udział kontynuujących kształcenie wśród\nabsolwentów liceów ogólnokształcących z województwa\n", woj$odmiany[[1]]$nazwa_dop)
+
+tabelka %>% 
+  mutate(across(value,
+                ~paste0(round(. * 100), "\\%"))) %>%
+  kable(format = "latex", booktabs = TRUE, escape = FALSE, longtable = TRUE,
+        linesep = "",
+        align = "lc",
+        col.names = NULL,
+        digits = 0) %>% 
+  kable_styling(position = wyrownanieTabWykr,
+                latex_options = c("hold_position", "repeat_header"),
+                # font_size = 10,
+                full_width = FALSE,
+                repeat_header_text = "(ciąg dalszy tabeli)") %>% 
+  add_header_above(c("Sposób kontynuowania kształcenia", nagl),
+                   align = c("l", "c"))
+```
+
+Odsetki mogą sumować się do więcej niż 100% ze względu na możliwość kontynuowania edukacji w więcej niż jednej formie.
+
+    b) cały kraj
 
 ```{r, echo=FALSE, message=FALSE, error=FALSE, warning=FALSE, results='asis', fig.align=wyrownanieTabWykr}
 tabelka_bez_brak = god2$E2_nauka_kontyn[[1]][-1] %>% 
@@ -1629,9 +1701,81 @@ Odsetki mogą sumować się do więcej niż 100% ze względu na możliwość kon
 
 3. Praca po ukończeniu liceum ogólnokształcącego dla młodzieży w okresie od września do grudnia `r params$rok` roku
 
-Procentowy udział grup wyróżnionych ze względu na część przepracowanego okresu wśród absolwentów liceów ogólnokształcących dla młodzieży z całego kraju.
+    a) województwo `r woj$odmiany[[1]]$nazwa`
+    
+* Część przepracowanego okresu - procentowy udział grup wyróżnionych ze względu na część przepracowanego okresu wśród absolwentów liceów ogólnokształcących dla młodzieży z województwa `r woj$odmiany[[1]]$nazwa_dop`.
 
-  a) Część przepracowanego okresu
+```{r, echo=FALSE, message=FALSE, error=FALSE, warning=FALSE, results='asis', fig.align=wyrownanieTabWykr}
+ucz = woj$Z4_ucz[[1]] %>% 
+  as_tibble() %>% 
+  select(-c(n, srednia, med)) %>% 
+  pivot_longer(everything()) %>% 
+  rename(ucz = value)
+
+ucz$name = c("Brak pracy", "Praca przez\nczęść okresu", "Praca przez\ncały okres")
+
+n_ucz = woj$Z4_nie_ucz[[1]] %>% 
+  as_tibble() %>% 
+  select(-c(n, srednia, med)) %>% 
+  pivot_longer(everything()) %>% 
+  rename(nie_ucz = value)
+
+cbind(ucz, n_ucz[,2]) %>% 
+  mutate(across(2:3,
+                ~paste0(round(. * 100), "\\%"))) %>%
+  kable("latex", booktabs = TRUE, escape = FALSE, longtable = TRUE,
+        linesep = "",
+        align = "lcc",
+        col.names = NULL,
+        digits = 0) %>%
+  kable_styling(position = wyrownanieTabWykr,
+                latex_options = c("hold_position", "repeat_header"),
+                # font_size = 9,
+                full_width = FALSE,
+                repeat_header_text = "(ciąg dalszy tabeli)") %>%
+  add_header_above(c(" ", "Absolwenci liceów ogólnokształcących\nz województwa kontynuujący naukę" = 1, "Absolwenci liceów ogólnokształcących\nz województwa niekontynuujący nauki" = 1),
+                   align = c("l", "c", "c"))
+
+
+```
+
+* Formy wykonywania pracy w grudniu `r params$rok` roku - procentowy udział grup wyróżnionych ze względu na formę wykonywania pracy wśród pracujących absolwentów liceów ogólnokształcących dla młodzieży z województwa `r woj$odmiany[[1]]$nazwa_dop`.
+
+```{r, echo=FALSE, message=FALSE, error=FALSE, warning=FALSE, results='asis', fig.align=wyrownanieTabWykr}
+ucz = woj$Z8_formy_ucz[[1]] %>% 
+  as_tibble() %>% 
+  select(-n) %>% 
+  pivot_longer(everything()) %>% 
+  rename(ucz = value)
+
+ucz$name = c("Zatrudnieni tylko na UOP", "Tylko samozatrudnieni", "Tylko inna forma", "Więcej niż jedna forma")
+
+n_ucz = god2$Z8_formy_nie_ucz[[1]] %>% 
+  as_tibble() %>% 
+  select(-c(n)) %>% 
+  pivot_longer(everything()) %>% 
+  rename(nie_ucz = value)
+
+cbind(ucz, n_ucz[,2]) %>% 
+  mutate(across(2:3,
+                ~paste0(round(. * 100), "\\%"))) %>%
+  kable("latex", booktabs = TRUE, escape = FALSE, longtable = TRUE,
+          linesep = "",
+          align = "lcc",
+          col.names = NULL,
+          digits = 0) %>%
+    kable_styling(position = wyrownanieTabWykr,
+                  latex_options = c("hold_position", "repeat_header"),
+                  # font_size = 10,
+                  full_width = FALSE,
+                  repeat_header_text = "(ciąg dalszy tabeli)") %>%
+    add_header_above(c(" ", "Absolwenci liceów ogólnokształcących\nz województwa kontynuujący naukę" = 1, "Absolwenci liceów ogólnokształcących\nz województwa niekontynuujący nauki" = 1),
+                   align = c("l", "c", "c"))
+```
+
+    b) cały kraj
+
+* Część przepracowanego okresu - procentowy udział grup wyróżnionych ze względu na część przepracowanego okresu wśród absolwentów liceów ogólnokształcących dla młodzieży z całego kraju.
 
 ```{r, echo=FALSE, message=FALSE, error=FALSE, warning=FALSE, results='asis', fig.align=wyrownanieTabWykr}
 ucz = god2$Z4_ucz[[1]] %>% 
@@ -1663,12 +1807,9 @@ cbind(ucz, n_ucz[,2]) %>%
                 repeat_header_text = "(ciąg dalszy tabeli)") %>%
   add_header_above(c(" ", "Absolwenci liceów ogólnokształcących\nz całego kraju kontynuujący naukę" = 1, "Absolwenci liceów ogólnokształcących\nz całego kraju niekontynuujący nauki" = 1),
                    align = c("l", "c", "c"))
-
 ```
 
-  b) Formy wykonywania pracy w grudniu `r params$rok` roku
-
-Procentowy udział grup wyróżnionych ze względu na formę wykonywania pracy wśród pracujących absolwentów liceów ogólnokształcących z całego kraju.
+* Formy wykonywania pracy w grudniu `r params$rok` roku - procentowy udział grup wyróżnionych ze względu na formę wykonywania pracy wśród pracujących absolwentów liceów ogólnokształcących dla młodzieży z całego kraju.
 
 ```{r, echo=FALSE, message=FALSE, error=FALSE, warning=FALSE, results='asis', fig.align=wyrownanieTabWykr}
 ucz = god2$Z8_formy_ucz[[1]] %>% 
@@ -1703,6 +1844,33 @@ cbind(ucz, n_ucz[,2]) %>%
 ```
 
 4. Bezrobocie rejestrowane od września do grudnia `r params$rok` roku
+
+    a) województwo `r woj$odmiany[[1]]$nazwa`
+
+Procentowy udział grup wyróżnionych ze względu na część okresu, w ciągu którego byli zarejestrowani jako bezrobotni, wśród absolwentów liceów ogólnokształcących dla młodzieży z województwa `r woj$odmiany[[1]]$nazwa_dop`.
+
+```{r, echo=FALSE, message=FALSE, error=FALSE, warning=FALSE, results='asis', fig.align=wyrownanieTabWykr}
+woj$B2_bezrob[[1]]$l_mies_bezrob[1] = "0 (brak bezrobocia)"
+woj$B2_bezrob[[1]] %>% 
+  as_tibble() %>% 
+  select(l_mies_bezrob, value) %>% 
+  mutate(across(value,
+                ~paste0(round(. * 100), "\\%"))) %>% 
+  kable("latex", booktabs = TRUE, escape = FALSE, longtable = TRUE,
+        linesep = "",
+        align = "lc",
+        col.names = NULL,
+        digits = 0) %>%
+  kable_styling(position = wyrownanieTabWykr,
+                latex_options = c("hold_position", "repeat_header"),
+                # font_size = 10,
+                full_width = FALSE,
+                repeat_header_text = "(ciąg dalszy tabeli)") %>%
+  add_header_above(c("Liczba miesięcy bezrobocia", "Odsetek"),
+                   align = c("l", "c"))
+```
+
+    b) cały kraj
 
 Procentowy udział grup wyróżnionych ze względu na część okresu, w ciągu którego byli zarejestrowani jako bezrobotni, wśród absolwentów liceów ogólnokształcących dla młodzieży z całego kraju.
 
