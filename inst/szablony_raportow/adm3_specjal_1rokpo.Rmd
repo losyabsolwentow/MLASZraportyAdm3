@@ -1344,7 +1344,7 @@ if (woj$l_abs[[1]] >= progLiczebnosci & woj$Z4_ucz[[1]]$n >= progLiczebnosci) {
                   # font_size = 9,
                   full_width = FALSE,
                   repeat_header_text = "(ciąg dalszy tabeli)") %>%
-    add_header_above(c(" ", "Absolwenci szkół specjalnych\nz województwa kontynuujący naukę" = 1, "Absolwenci Absolwenci szkół specjalnych\nz województwa niekontynuujący nauki" = 1),
+    add_header_above(c(" ", "Absolwenci szkół specjalnych\nz województwa kontynuujący naukę" = 1, "Absolwenci szkół specjalnych\nz województwa niekontynuujący nauki" = 1),
                      align = c("l", "c", "c"))
   
   cat(tabelka)
@@ -1385,7 +1385,7 @@ if (woj$l_abs[[1]] >= progLiczebnosci & woj$Z4_ucz[[1]]$n >= progLiczebnosci) {
                   # font_size = 10,
                   full_width = FALSE,
                   repeat_header_text = "(ciąg dalszy tabeli)") %>%
-    add_header_above(c(" ", "Absolwenci szkół specjalnych\nz województwa kontynuujący naukę" = 1, "Absolwenci Absolwenci szkół specjalnych\nz województwa niekontynuujący nauki" = 1),
+    add_header_above(c(" ", "Absolwenci szkół specjalnych\nz województwa kontynuujący naukę" = 1, "Absolwenci szkół specjalnych\nz województwa niekontynuujący nauki" = 1),
                      align = c("l", "c", "c"))
   
   cat(tabelka)

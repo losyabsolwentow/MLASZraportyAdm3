@@ -950,41 +950,43 @@ if (length(szk$liczebnosc_dyscypliny[[1]]) > 1) {
 ```
 
 ```{r, echo=FALSE, message=FALSE, error=FALSE, warning=FALSE, results='asis', fig.align=wyrownanieTabWykr}
-if (length(szk$dyscypliny_kob[[1]]) > 1) {
-  cat(
-    "Poniższa tabela prezentuje rozkład dyscyplin, w których kontynuowały naukę absolwentki Państwa szkoły.\n\nTabela ",
-    tab_num(),
-    ": Dyscypliny, w których absolwenci Państwa szkoły najczęściej studiowali w grudniu ",
-    params$rok,
-    " roku - kobiety (%) - maksymalnie 10",
-    sep = "")
-  
-  tabelka = szk$dyscypliny_kob[[1]] %>% 
-    as_tibble() %>% 
-    select(-n) %>% 
-    slice_max(order_by = odsetek, n = 10, with_ties = FALSE) %>%
-    mutate(across(odsetek,
-                  ~paste0(round(. * 100), "\\%"))) %>% 
-    kable(format = "latex",
-          booktabs = TRUE,
-          escape = FALSE,
-          longtable = TRUE,
-          linesep = "",
-          align = "lc",
-          col.names = NULL,
-          digits = 0) %>%
-    kable_styling(position = wyrownanieTabWykr,
-                  latex_options = c("hold_position", "repeat_header"),
-                  full_width = FALSE,
-                  repeat_header_text = "(ciąg dalszy tabeli)") %>%
-    add_header_above(c(paste0("Dyscypliny, w których absolwentki Państwa\nszkoły studiowały w grudniu ", params$rok, " roku"), "% wśród absolwentek studiujących" = 1),
-                     align = c("l", "c")) %>% 
-    add_footnote("W tabeli prezentowanych jest maksymalnie 10 dyscyplin o najwyższych odsetkach kontynuacji",
-                 notation = "none")
-  
-  cat(tabelka)
-  
-  cat("\\textcolor{black}{\\relscale{0.75}Odsetki mogą sumować się do więcej niż 100\\% ze względu na możliwość studiowania w więcej niż jednej dyscyplinie.}")
+if (round(szk$E2_nauka_kontyn[[1]]$studia * szk$E2_nauka_kontyn[[1]]$n) >= progLiczebnosci) {
+  if (length(szk$dyscypliny_kob[[1]]) > 1) {
+    cat(
+      "Poniższa tabela prezentuje rozkład dyscyplin, w których kontynuowały naukę absolwentki Państwa szkoły.\n\nTabela ",
+      tab_num(),
+      ": Dyscypliny, w których absolwenci Państwa szkoły najczęściej studiowali w grudniu ",
+      params$rok,
+      " roku - kobiety (%) - maksymalnie 10",
+      sep = "")
+    
+    tabelka = szk$dyscypliny_kob[[1]] %>% 
+      as_tibble() %>% 
+      select(-n) %>% 
+      slice_max(order_by = odsetek, n = 10, with_ties = FALSE) %>%
+      mutate(across(odsetek,
+                    ~paste0(round(. * 100), "\\%"))) %>% 
+      kable(format = "latex",
+            booktabs = TRUE,
+            escape = FALSE,
+            longtable = TRUE,
+            linesep = "",
+            align = "lc",
+            col.names = NULL,
+            digits = 0) %>%
+      kable_styling(position = wyrownanieTabWykr,
+                    latex_options = c("hold_position", "repeat_header"),
+                    full_width = FALSE,
+                    repeat_header_text = "(ciąg dalszy tabeli)") %>%
+      add_header_above(c(paste0("Dyscypliny, w których absolwentki Państwa\nszkoły studiowały w grudniu ", params$rok, " roku"), "% wśród absolwentek studiujących" = 1),
+                       align = c("l", "c")) %>% 
+      add_footnote("W tabeli prezentowanych jest maksymalnie 10 dyscyplin o najwyższych odsetkach kontynuacji",
+                   notation = "none")
+    
+    cat(tabelka)
+    
+    cat("\\textcolor{black}{\\relscale{0.75}Odsetki mogą sumować się do więcej niż 100\\% ze względu na możliwość studiowania w więcej niż jednej dyscyplinie.}")
+  }
 } else {
   cat(
     "Liczba absolwentek Państwa szkoły (tylko grupy kobiet), które w grudniu ",
@@ -995,41 +997,43 @@ if (length(szk$dyscypliny_kob[[1]]) > 1) {
 ```
 
 ```{r, echo=FALSE, message=FALSE, error=FALSE, warning=FALSE, results='asis', fig.align=wyrownanieTabWykr}
-if (length(szk$dyscypliny_mez[[1]]) > 1) {
-  cat(
-    "Poniższa tabela prezentuje rozkład dyscyplin, w których kontynuowli naukę absolwenci Państwa szkoły.\n\nTabela ",
-    tab_num(),
-    ": Dyscypliny, w których absolwenci Państwa szkoły najczęściej studiowali w grudniu ",
-    params$rok,
-    " roku - mężczyźni (%) - maksymalnie 10",
-    sep = "")
-  
-  tabelka = szk$dyscypliny_mez[[1]] %>% 
-    as_tibble() %>% 
-    select(-n) %>% 
-    slice_max(order_by = odsetek, n = 10, with_ties = FALSE) %>%
-    mutate(across(odsetek,
-                  ~paste0(round(. * 100), "\\%"))) %>% 
-    kable(format = "latex",
-          booktabs = TRUE,
-          escape = FALSE,
-          longtable = TRUE,
-          linesep = "",
-          align = "lc",
-          col.names = NULL,
-          digits = 0) %>%
-    kable_styling(position = wyrownanieTabWykr,
-                  latex_options = c("hold_position", "repeat_header"),
-                  full_width = FALSE,
-                  repeat_header_text = "(ciąg dalszy tabeli)") %>%
-    add_header_above(c(paste0("Dyscypliny, w których absolwenci Państwa\nszkoły studiowali w grudniu ", params$rok, " roku"), "% wśród absolwentów studiujących" = 1),
-                     align = c("l", "c")) %>% 
-    add_footnote("W tabeli prezentowanych jest maksymalnie 10 dyscyplin o najwyższych odsetkach kontynuacji",
-                 notation = "none")
-  
-  cat(tabelka)
-  
-  cat("\\textcolor{black}{\\relscale{0.75}Odsetki mogą sumować się do więcej niż 100\\% ze względu na możliwość studiowania w więcej niż jednej dyscyplinie.}")
+if (round(szk$E2_nauka_kontyn[[1]]$studia * szk$E2_nauka_kontyn[[1]]$n) >= progLiczebnosci) {
+  if (length(szk$dyscypliny_mez[[1]]) > 1) {
+    cat(
+      "Poniższa tabela prezentuje rozkład dyscyplin, w których kontynuowli naukę absolwenci Państwa szkoły.\n\nTabela ",
+      tab_num(),
+      ": Dyscypliny, w których absolwenci Państwa szkoły najczęściej studiowali w grudniu ",
+      params$rok,
+      " roku - mężczyźni (%) - maksymalnie 10",
+      sep = "")
+    
+    tabelka = szk$dyscypliny_mez[[1]] %>% 
+      as_tibble() %>% 
+      select(-n) %>% 
+      slice_max(order_by = odsetek, n = 10, with_ties = FALSE) %>%
+      mutate(across(odsetek,
+                    ~paste0(round(. * 100), "\\%"))) %>% 
+      kable(format = "latex",
+            booktabs = TRUE,
+            escape = FALSE,
+            longtable = TRUE,
+            linesep = "",
+            align = "lc",
+            col.names = NULL,
+            digits = 0) %>%
+      kable_styling(position = wyrownanieTabWykr,
+                    latex_options = c("hold_position", "repeat_header"),
+                    full_width = FALSE,
+                    repeat_header_text = "(ciąg dalszy tabeli)") %>%
+      add_header_above(c(paste0("Dyscypliny, w których absolwenci Państwa\nszkoły studiowali w grudniu ", params$rok, " roku"), "% wśród absolwentów studiujących" = 1),
+                       align = c("l", "c")) %>% 
+      add_footnote("W tabeli prezentowanych jest maksymalnie 10 dyscyplin o najwyższych odsetkach kontynuacji",
+                   notation = "none")
+    
+    cat(tabelka)
+    
+    cat("\\textcolor{black}{\\relscale{0.75}Odsetki mogą sumować się do więcej niż 100\\% ze względu na możliwość studiowania w więcej niż jednej dyscyplinie.}")
+  }
 } else {
   cat(
     "Liczba absolwentów Państwa szkoły (tylko grupy mężczyzn), którzy w grudniu ",
